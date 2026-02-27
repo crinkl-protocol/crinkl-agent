@@ -1,14 +1,6 @@
 <div align="center">
 
-```
- ██████╗██████╗ ██╗███╗   ██╗██╗  ██╗██╗
-██╔════╝██╔══██╗██║████╗  ██║██║ ██╔╝██║
-██║     ██████╔╝██║██╔██╗ ██║█████╔╝ ██║
-██║     ██╔══██╗██║██║╚██╗██║██╔═██╗ ██║
-╚██████╗██║  ██║██║██║ ╚████║██║  ██╗███████╗
- ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
-               a g e n t
-```
+<img src=".github/banner.png" alt="crinkl agent" width="600">
 
 **DKIM-signed email receipts → verified spend tokens → sats over Lightning.**
 
@@ -30,12 +22,7 @@ SaaS subscriptions generate DKIM-signed billing emails. This agent scans Gmail f
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A["Your Gmail<br/>(read-only)"] --> B["Crinkl Agent<br/>(local)"]
-    B --> C["Crinkl Protocol<br/>(DKIM + Attestation)"]
-    C --> D["BTC sats<br/>(yours)"]
-```
+<img src=".github/flow.png" alt="Gmail → crinkl-agent → Crinkl Protocol → sats" width="600">
 
 1. **Fetch** allowed vendors from the Crinkl API
 2. **Search** Gmail for billing emails (last 14 days, read-only)
