@@ -77,9 +77,9 @@ Verification requires a **DKIM-signed email**. The vendor must email you a recei
 | Vendor | Domain | Status |
 |--------|--------|--------|
 | Gumroad | `gumroad.com` | Supported |
-| Paddle | `paddle.com` | Supported |
 | Stripe | `stripe.com` | Supported |
 | Suno | `suno.com` | Supported |
+| Gamma | `gamma.app` | Supported |
 
 **Cannot support (no emailed receipts):**
 - OpenAI — invoices behind dashboard download only
