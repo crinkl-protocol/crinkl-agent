@@ -70,15 +70,28 @@ crinkl-agent --help     Show help
 0 */6 * * * cd /path/to/crinkl-agent && npm run dev >> ~/.crinkl/agent.log 2>&1
 ```
 
-## Vendor parsers
+## Supported vendors
 
-The agent fetches the current vendor allowlist from the API:
+Verification requires a **DKIM-signed email**. The vendor must email you a receipt — web-only invoices (download from dashboard) have no DKIM signature and cannot be verified.
+
+| Vendor | Domain | Status |
+|--------|--------|--------|
+| Gumroad | `gumroad.com` | Supported |
+| Paddle | `paddle.com` | Supported |
+| Stripe | `stripe.com` | Supported |
+| Suno | `suno.com` | Supported |
+
+**Cannot support (no emailed receipts):**
+- OpenAI — invoices behind dashboard download only
+- Anthropic — invoices behind dashboard download only
+
+> Want to add a vendor that emails receipts? Write a parser, open a PR, and once it's merged we add the domain to the allowlist. Everyone running the agent earns from it. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Live allowlist:
 
 ```bash
 curl https://api.crinkl.xyz/api/agent/allowed-vendors
 ```
-
-Want to add a vendor? Write a parser, open a PR, and once it's merged we add the domain to the allowlist. Everyone running the agent earns from it. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```
 src/vendors/
