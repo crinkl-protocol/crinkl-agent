@@ -1,37 +1,46 @@
 <div align="center">
 
-<img src=".github/banner.png" alt="crinkl agent" width="600">
+# crinkl-agent
 
-**DKIM-signed email receipts → verified spend tokens → sats over Lightning.**
+**Turn SaaS billing emails into verified spend tokens and sats over Lightning.**
 
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Vendors](#supported-vendors) · [MCP](#for-ai-agents--mcp-clients) · [Privacy](#privacy)
+[How it works](#how-it-works) · [Quick start](#quick-start) · [API](#api-reference) · [Privacy](#privacy)
 
 </div>
 
 ---
 
-> **AI agent?** Read [`AGENTS.md`](AGENTS.md) — structured instructions, API reference, contribution contract, and the MCP endpoint.
+## What is Crinkl
 
-SaaS subscriptions generate DKIM-signed billing emails. This agent scans Gmail for them, verifies the cryptographic signatures, and submits them to the [Crinkl protocol](https://crinkl.xyz). Each verified receipt produces a signed spend token and routes sats to the submitting wallet over Lightning.
+[Crinkl](https://crinkl.xyz) is a progressive web app built on the [crinkl-protocol](https://github.com/crinkl-protocol/crinkl-protocol) — an open protocol for verifying real-world spend and producing **identity-free spend tokens**. Scan a receipt or submit a DKIM-signed billing email, and Crinkl mints a cryptographic token attesting to the spend. No personal data in the token. No account linking. The token is the proof.
 
-> **Status:** Early access. API key generation is rolling out at [app.crinkl.xyz](https://app.crinkl.xyz) — not yet available to all users. Clone and run from source in the meantime.
+Crinkl is designed for the AI era. Humans use the PWA camera to scan physical receipts. Agents use this repo (or the REST API directly) to submit digital receipts. Both paths produce the same protocol artifact: a signed spend token routed to your wallet, earning sats over Lightning.
+
+**This agent** scans Gmail for DKIM-signed SaaS billing emails and submits them to the Crinkl protocol. It's a reference implementation — a working example of how to call the API. If you're building your own agent or integration, you may only need the [API endpoints](#api-reference).
 
 ## How it works
 
-<img src=".github/flow.png" alt="Gmail → crinkl-agent → Crinkl Protocol → sats" width="600">
+```
+Gmail (readonly) → crinkl-agent (your machine) → api.crinkl.xyz (DKIM verify + attest) → spend token → ₿ sats
+```
 
 1. **Fetch** allowed vendors from the Crinkl API
-2. **Search** Gmail for billing emails (last 14 days, read-only)
+2. **Search** Gmail for billing emails from those vendors (last 14 days, read-only)
 3. **Download** each email as raw `.eml` — in memory, never written to disk
-4. **Verify** DKIM signature via the Crinkl verification endpoint
-5. **Submit** valid receipts — Crinkl mints a spend token and queues your reward
-6. **Dedup** locally so the same email is never submitted twice
+4. **Submit** to Crinkl — server verifies the DKIM signature, extracts invoice data, mints a spend token
+5. **Dedup** locally so the same email is never submitted twice
+
+The server does all verification and data extraction. The agent is just a pipe from your inbox to the API.
 
 ## Quick start
 
 ### 1. Get a Crinkl API key
 
-Generate one at [app.crinkl.xyz](https://app.crinkl.xyz) (agent key generation rolling out — not yet available to all users).
+Sign up at [app.crinkl.xyz](https://app.crinkl.xyz) — it's a PWA, works in any browser. Once you have a wallet:
+
+**Settings → Agent API Keys → Generate**
+
+This gives you a `crk_...` key tied to your wallet. Spend tokens minted by the agent are credited to this wallet.
 
 ### 2. Set up Gmail OAuth
 
@@ -45,18 +54,16 @@ git clone https://github.com/crinkl-protocol/crinkl-agent.git
 cd crinkl-agent
 npm install
 cp .env.example .env    # add your API key + OAuth credentials
-npm run dev
+npm run auth            # one-time Gmail authorization
+npm run dev             # scan + submit
 ```
 
-First run opens a browser for Gmail authorization. The token is stored locally at `~/.crinkl/gmail-credentials.json`.
-
-## Usage
+### Usage
 
 ```
-crinkl-agent            Scan + submit
-crinkl-agent --scan     Dry run — preview without submitting
-crinkl-agent --auth     Set up Gmail auth only
-crinkl-agent --help     Show help
+npm run dev              # scan Gmail + submit receipts
+npm run dev -- --scan    # dry run (preview only)
+npm run dev -- --auth    # set up Gmail auth only
 ```
 
 ### Run on a schedule
@@ -68,38 +75,44 @@ crinkl-agent --help     Show help
 
 ## Supported vendors
 
-Verification requires a **DKIM-signed email**. The vendor must email you a receipt — web-only invoices (download from dashboard) have no DKIM signature and cannot be verified.
-
-Canonical list: [`vendors/allowlist.json`](vendors/allowlist.json)
-
-| Vendor | Domain | Category |
-|--------|--------|----------|
-| Gumroad | `gumroad.com` | Digital commerce |
-| Stripe | `stripe.com` | Payments |
-| Suno | `suno.com` | SaaS |
-| Gamma | `gamma.app` | SaaS |
-| OpenAI | `openai.com` | SaaS |
-
-**Cannot support (no emailed receipts):** Anthropic — dashboard-only invoices, no DKIM.
-
-> Want to add a vendor? Add it to [`vendors/allowlist.json`](vendors/allowlist.json) and open a PR. Once merged, the domain goes live on the API. Everyone running the agent earns from it.
-
-Live API:
+The server maintains the allowlist. The agent fetches it on every run.
 
 ```bash
 curl https://api.crinkl.xyz/api/agent/allowed-vendors
 ```
 
+Vendors must send DKIM-signed billing emails. Web-only invoices (download from dashboard) have no DKIM signature and can't be verified.
+
+If you submit an email from an unknown vendor, it's **queued for review** (not rejected). Once approved, the vendor is added to the allowlist and your spend is created retroactively.
+
+> **Want to add a vendor?** Just submit an email from them. If the domain has valid DKIM, we'll review and approve it.
+
+## API reference
+
+### Public (no auth)
+
 ```
-src/vendors/
-├── types.ts       # VendorParser interface
-├── registry.ts    # Parser lookup + registration
-└── generic.ts     # Fallback (server does authoritative parsing)
+GET https://api.crinkl.xyz/api/agent/allowed-vendors
 ```
 
-## For AI agents / MCP clients
+### Authenticated (`x-api-key` header)
 
-If you're an MCP-capable agent (Claude Desktop, Cursor, OpenClaw, etc.) — skip this repo and use the MCP server directly:
+```
+POST https://api.crinkl.xyz/api/agent/submit-email-receipt
+Body: { "eml": "<base64-encoded .eml>" }
+Returns: 201 (created) | 202 (queued for vendor review) | 409 (duplicate) | 422 (validation error)
+
+POST https://api.crinkl.xyz/api/agent/verify-email-receipt
+Body: { "eml": "<base64-encoded .eml>" }
+Returns: 200 (preview without submitting)
+
+GET https://api.crinkl.xyz/api/agent/spends/:spendId/token/latest
+Returns: the signed spend attestation token
+```
+
+### For MCP-capable agents
+
+If you're running Claude Desktop, Cursor, OpenClaw, or any MCP client — you can use the public MCP server for read-only commerce intelligence:
 
 ```json
 {
@@ -111,33 +124,33 @@ If you're an MCP-capable agent (Claude Desktop, Cursor, OpenClaw, etc.) — skip
 }
 ```
 
-Tools: `submit-email-receipt`, `verify-email-receipt`, `allowed-vendors`.
-
-Not using MCP? See [`AGENTS.md`](AGENTS.md) for the REST API reference and structured contribution instructions.
+Email receipt submission uses the REST API above (requires an API key).
 
 ## Privacy
 
-This agent runs entirely on your machine. Here's what leaves it:
+This agent runs on your machine. Here's what leaves it:
 
 | Data | Destination | Purpose |
 |------|-------------|---------|
 | Individual `.eml` files | `api.crinkl.xyz` | DKIM verification + spend token minting |
 | Nothing else | — | — |
 
-- **Read-only Gmail access.** `gmail.readonly` scope — cannot send, delete, or modify.
-- **No inbox access shared.** Crinkl receives individual emails, not inbox access.
-- **OAuth token stays local.** Stored at `~/.crinkl/gmail-credentials.json`, never transmitted.
+- **Read-only Gmail access** — `gmail.readonly` scope. Cannot send, delete, or modify.
+- **No inbox access shared** — Crinkl receives individual emails, not credentials or tokens.
+- **OAuth token stays local** — stored at `~/.crinkl/gmail-credentials.json`.
+- **Spend tokens are identity-free** — no email, no name, no account ID in the signed payload.
 
-## Contributing
+## Architecture
 
-Add a vendor parser, add an email provider, or pick up an [open issue](https://github.com/crinkl-protocol/crinkl-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
-
-```bash
-npm test             # run parser tests
-npm run lint         # type check
+```
+src/
+├── index.ts       # CLI entry — Gmail scan loop, submit/dedup logic
+├── config.ts      # .env loader
+├── gmail.ts       # Gmail OAuth + search + download
+└── crinkl.ts      # Crinkl API client (verify, submit, vendors)
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and a test template.
+~200 lines of core logic. The server does the hard part.
 
 ## License
 
@@ -147,6 +160,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and a test template.
 
 <div align="center">
 
-**[crinkl.xyz](https://crinkl.xyz)** · facts first, identity detached
+**[crinkl.xyz](https://crinkl.xyz)** · verified spend, identity detached
 
 </div>
