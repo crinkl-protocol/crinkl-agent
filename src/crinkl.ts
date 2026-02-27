@@ -33,6 +33,7 @@ interface VerifyResult {
 
 interface SubmitResult {
   success: boolean;
+  /** Present when spend was created (201) */
   data?: {
     submissionId: string;
     spendId: string;
@@ -47,6 +48,9 @@ interface SubmitResult {
     status: string;
     verificationMethod: string;
   };
+  /** Present when vendor is unknown and queued for admin review (202) */
+  status?: "QUEUED_FOR_REVIEW";
+  message?: string;
   error?: string;
   domain?: string;
 }

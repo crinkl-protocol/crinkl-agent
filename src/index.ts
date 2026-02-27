@@ -193,9 +193,15 @@ async function main() {
       // Submit for rewards
       const result = await crinkl.submitEmailReceipt(rawEml);
 
-      if (result.success) {
+      if (result.status === "QUEUED_FOR_REVIEW") {
         console.log(
-          `  SUBMITTED: ${result.data!.store} — $${amount} — status: ${result.data!.status}`
+          `  QUEUED: vendor ${result.domain || "unknown"} not yet approved — queued for admin review`
+        );
+        submittedIds.add(email.messageId);
+        skipped++;
+      } else if (result.success && result.data) {
+        console.log(
+          `  SUBMITTED: ${result.data.store} — $${amount} — status: ${result.data.status}`
         );
         submittedIds.add(email.messageId);
         submitted++;
