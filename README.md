@@ -1,15 +1,5 @@
 <div align="center">
 
-```
- ██████╗██████╗ ██╗███╗   ██╗██╗  ██╗██╗
-██╔════╝██╔══██╗██║████╗  ██║██║ ██╔╝██║
-██║     ██████╔╝██║██╔██╗ ██║█████╔╝ ██║
-██║     ██╔══██╗██║██║╚██╗██║██╔═██╗ ██║
-╚██████╗██║  ██║██║██║ ╚████║██║  ██╗███████╗
- ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
-               a g e n t
-```
-
 **Earn Bitcoin from email receipts you already have.**
 
 [![CI](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml)
@@ -30,11 +20,11 @@ You keep running the subscriptions anyway. Now they pay you back.
 
 ## How it works
 
-```
-┌─────────────┐     ┌──────────────┐     ┌──────────────────┐     ┌─────────┐
-│  Your Gmail  │────▶│  crinkl-agent │────▶│  Crinkl Protocol  │────▶│  ₿ sats  │
-│  (readonly)  │     │  (local)      │     │  (DKIM + attest)  │     │  (yours) │
-└─────────────┘     └──────────────┘     └──────────────────┘     └─────────┘
+```mermaid
+flowchart LR
+    A["Your Gmail<br/>(read-only)"] --> B["Crinkl Agent<br/>(local)"]
+    B --> C["Crinkl Protocol<br/>(DKIM + Attestation)"]
+    C --> D["BTC sats<br/>(yours)"]
 ```
 
 1. **Fetch** allowed vendors from the Crinkl API
