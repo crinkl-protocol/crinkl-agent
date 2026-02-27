@@ -16,11 +16,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-F7931A.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-18102A.svg)](https://nodejs.org)
 
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Add a vendor](#contributing) · [MCP](#mcp-alternative) · [Privacy](#privacy)
+[How it works](#how-it-works) · [Quick start](#quick-start) · [Add a vendor](#contributing) · [MCP](#for-ai-agents--mcp-clients) · [Privacy](#privacy)
 
 </div>
 
 ---
+
+> **AI agent?** Read [`AGENTS.md`](AGENTS.md) — structured instructions, API reference, contribution contract, and the MCP endpoint.
 
 Your SaaS subscriptions generate DKIM-signed billing emails every month. This agent finds them, verifies the cryptographic signatures, and submits them to the [Crinkl protocol](https://crinkl.xyz) — which turns each one into a signed spend token and pays you in Bitcoin over Lightning.
 
@@ -104,9 +106,9 @@ src/vendors/
 └── generic.ts     # Fallback (server does authoritative parsing)
 ```
 
-## MCP alternative
+## For AI agents / MCP clients
 
-If you use Claude Desktop, Cursor, or any MCP client — skip the agent entirely and use Crinkl's MCP server:
+If you're an MCP-capable agent (Claude Desktop, Cursor, OpenClaw, etc.) — skip this repo and use the MCP server directly:
 
 ```json
 {
@@ -119,6 +121,8 @@ If you use Claude Desktop, Cursor, or any MCP client — skip the agent entirely
 ```
 
 Tools: `submit-email-receipt`, `verify-email-receipt`, `allowed-vendors`.
+
+Not using MCP? See [`AGENTS.md`](AGENTS.md) for the REST API reference and structured contribution instructions.
 
 ## Privacy
 
@@ -136,7 +140,14 @@ This agent runs entirely on your machine. Here's what leaves it:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add vendor parsers and email provider adapters.
+Add a vendor parser, add an email provider, or pick up an [open issue](https://github.com/crinkl-protocol/crinkl-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+
+```bash
+npm test             # run parser tests
+npm run lint         # type check
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and a test template.
 
 ## License
 
