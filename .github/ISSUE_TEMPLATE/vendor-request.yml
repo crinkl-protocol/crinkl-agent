@@ -1,0 +1,65 @@
+name: Vendor Request
+description: Request support for a new email receipt vendor
+title: "[Vendor] "
+labels: ["vendor-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request a new vendor for the Crinkl agent. No coding required — just tell us about the vendor and we'll add support.
+
+  - type: input
+    id: vendor-name
+    attributes:
+      label: Vendor name
+      description: The company or service name
+      placeholder: e.g. Spotify, AWS, Hetzner
+    validations:
+      required: true
+
+  - type: input
+    id: vendor-domain
+    attributes:
+      label: Email domain
+      description: The domain their billing emails come from
+      placeholder: e.g. billing.spotify.com
+    validations:
+      required: true
+
+  - type: textarea
+    id: email-example
+    attributes:
+      label: Example email structure
+      description: |
+        Paste the general structure of a billing email from this vendor.
+        **Redact all personal info and real amounts.** We just need the layout.
+      placeholder: |
+        Subject: Your receipt from Vendor - $XX.XX
+        From: billing@vendor.com
+
+        Invoice #INV-XXXXX
+        Date: Jan 15, 2026
+        Total: $XX.XX
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often do you get these emails?
+      options:
+        - Monthly
+        - Weekly
+        - Per transaction
+        - Yearly
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Anything else we should know about this vendor's email format
+    validations:
+      required: false

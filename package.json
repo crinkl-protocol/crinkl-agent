@@ -1,0 +1,46 @@
+{
+  "name": "crinkl-agent",
+  "version": "0.1.0",
+  "description": "Earn BTC from email receipts. Scans Gmail for billing emails, verifies DKIM signatures, and submits to Crinkl.",
+  "type": "module",
+  "bin": {
+    "crinkl-agent": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "scan": "tsx src/index.ts --scan",
+    "auth": "tsx src/index.ts --auth",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "crinkl",
+    "bitcoin",
+    "receipt",
+    "dkim",
+    "email",
+    "agent"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crinkl-protocol/crinkl-agent.git"
+  },
+  "homepage": "https://crinkl.xyz",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
