@@ -25,7 +25,7 @@ import {
   getMessageSubject,
 } from "./gmail.js";
 import { CrinklClient } from "./crinkl.js";
-import { getParser } from "./vendors/registry.js";
+
 
 const SUBMITTED_IDS_FILE = resolve(
   process.env.HOME || "~",
@@ -169,12 +169,6 @@ async function main() {
       console.log(`  Amount: $${amount} ${data.currency}`);
       console.log(`  Date: ${data.date}`);
       if (data.invoiceId) console.log(`  Invoice: ${data.invoiceId}`);
-
-      // Try local vendor parser (optional pre-parse for logging)
-      const parser = getParser(data.dkimDomain);
-      if (parser.name !== "generic") {
-        console.log(`  Parser: ${parser.name}`);
-      }
 
       if (!data.dkimVerified) {
         console.log("  SKIP: DKIM verification failed");
