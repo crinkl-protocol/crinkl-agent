@@ -74,20 +74,20 @@ crinkl-agent --help     Show help
 
 Verification requires a **DKIM-signed email**. The vendor must email you a receipt — web-only invoices (download from dashboard) have no DKIM signature and cannot be verified.
 
-| Vendor | Domain | Status |
-|--------|--------|--------|
-| Gumroad | `gumroad.com` | Supported |
-| Stripe | `stripe.com` | Supported |
-| Suno | `suno.com` | Supported |
-| Gamma | `gamma.app` | Supported |
+Canonical list: [`vendors/allowlist.json`](vendors/allowlist.json)
 
-**Cannot support (no emailed receipts):**
-- OpenAI — invoices behind dashboard download only
-- Anthropic — invoices behind dashboard download only
+| Vendor | Domain | Category |
+|--------|--------|----------|
+| Gumroad | `gumroad.com` | Digital commerce |
+| Stripe | `stripe.com` | Payments |
+| Suno | `suno.com` | SaaS |
+| Gamma | `gamma.app` | SaaS |
 
-> Want to add a vendor that emails receipts? Write a parser, open a PR, and once it's merged we add the domain to the allowlist. Everyone running the agent earns from it. See [CONTRIBUTING.md](CONTRIBUTING.md).
+**Cannot support (no emailed receipts):** OpenAI, Anthropic — dashboard-only invoices, no DKIM.
 
-Live allowlist:
+> Want to add a vendor? Add it to [`vendors/allowlist.json`](vendors/allowlist.json), write a parser, and open a PR. Once merged, the domain goes live on the API. Everyone running the agent earns from it. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Live API:
 
 ```bash
 curl https://api.crinkl.xyz/api/agent/allowed-vendors

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "updated": "2026-02-27",
+  "vendors": [
+    {
+      "domain": "gumroad.com",
+      "name": "Gumroad",
+      "category": "digital_commerce"
+    },
+    {
+      "domain": "stripe.com",
+      "name": "Stripe",
+      "category": "payments"
+    },
+    {
+      "domain": "suno.com",
+      "name": "Suno",
+      "category": "saas"
+    },
+    {
+      "domain": "gamma.app",
+      "name": "Gamma",
+      "category": "saas"
+    }
+  ],
+  "unsupported": [
+    {
+      "name": "OpenAI",
+      "reason": "No emailed receipts. Invoices behind dashboard download only."
+    },
+    {
+      "name": "Anthropic",
+      "reason": "No emailed receipts. Invoices behind dashboard download only."
+    }
+  ]
+}
