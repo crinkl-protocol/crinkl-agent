@@ -2,21 +2,17 @@
 
 # crinkl-agent
 
-**Turn SaaS billing emails into verified spend tokens and sats over Lightning.**
+Scan Gmail for SaaS billing emails. Submit them to [Crinkl](https://crinkl.xyz). Get sats over Lightning.
 
-[How it works](#how-it-works) · [Quick start](#quick-start) · [API](#api-reference) · [Privacy](#privacy)
+[Quick start](#quick-start) · [API](#api-reference) · [Privacy](#privacy)
 
 </div>
 
 ---
 
-## What is Crinkl
+[Crinkl](https://crinkl.xyz) verifies real-world spend and mints **identity-free spend tokens** — cryptographic proofs with no personal data. This agent is a reference implementation for the [email receipt API](#api-reference). Humans scan physical receipts in the [PWA](https://app.crinkl.xyz). Agents submit DKIM-signed emails via REST. Both produce the same protocol artifact.
 
-[Crinkl](https://crinkl.xyz) is a progressive web app built on the [crinkl-protocol](https://github.com/crinkl-protocol/crinkl-protocol) — an open protocol for verifying real-world spend and producing **identity-free spend tokens**. Scan a receipt or submit a DKIM-signed billing email, and Crinkl mints a cryptographic token attesting to the spend. No personal data in the token. No account linking. The token is the proof.
-
-Crinkl is designed for the AI era. Humans use the PWA camera to scan physical receipts. Agents use this repo (or the REST API directly) to submit digital receipts. Both paths produce the same protocol artifact: a signed spend token routed to your wallet, earning sats over Lightning.
-
-**This agent** scans Gmail for DKIM-signed SaaS billing emails and submits them to the Crinkl protocol. It's a reference implementation — a working example of how to call the API. If you're building your own agent or integration, you may only need the [API endpoints](#api-reference).
+> Building your own agent? You may only need the [API endpoints](#api-reference).
 
 ## How it works
 
