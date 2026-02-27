@@ -53,7 +53,7 @@ Environment variables (or .env file):
   MAX_EMAIL_AGE_DAYS      How far back to search (default: 14)
 
 Get started:
-  1. Get an API key at https://app.crinkl.xyz/profile/agent-keys
+  1. Get an API key at https://app.crinkl.xyz
   2. Create a Google OAuth app at https://console.cloud.google.com/apis/credentials
   3. Copy .env.example to .env and fill in your credentials
   4. Run: crinkl-agent

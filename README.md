@@ -1,6 +1,16 @@
 <div align="center">
 
-**Earn Bitcoin from email receipts you already have.**
+```
+ ██████╗██████╗ ██╗███╗   ██╗██╗  ██╗██╗
+██╔════╝██╔══██╗██║████╗  ██║██║ ██╔╝██║
+██║     ██████╔╝██║██╔██╗ ██║█████╔╝ ██║
+██║     ██╔══██╗██║██║╚██╗██║██╔═██╗ ██║
+╚██████╗██║  ██║██║██║ ╚████║██║  ██╗███████╗
+ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
+               a g e n t
+```
+
+**DKIM-signed email receipts → verified spend tokens → sats over Lightning.**
 
 [![CI](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-F7931A.svg)](LICENSE)
@@ -14,9 +24,9 @@
 
 > **AI agent?** Read [`AGENTS.md`](AGENTS.md) — structured instructions, API reference, contribution contract, and the MCP endpoint.
 
-Your SaaS subscriptions generate DKIM-signed billing emails every month. This agent finds them, verifies the cryptographic signatures, and submits them to the [Crinkl protocol](https://crinkl.xyz) — which turns each one into a signed spend token and pays you in Bitcoin over Lightning.
+SaaS subscriptions generate DKIM-signed billing emails. This agent scans Gmail for them, verifies the cryptographic signatures, and submits them to the [Crinkl protocol](https://crinkl.xyz). Each verified receipt produces a signed spend token and routes sats to the submitting wallet over Lightning.
 
-You keep running the subscriptions anyway. Now they pay you back.
+> **Status:** Early access. API key generation is rolling out at [app.crinkl.xyz](https://app.crinkl.xyz) — not yet available to all users. Clone and run from source in the meantime.
 
 ## How it works
 
@@ -38,7 +48,7 @@ flowchart LR
 
 ### 1. Get a Crinkl API key
 
-Generate one at [app.crinkl.xyz/profile/agent-keys](https://app.crinkl.xyz/profile/agent-keys).
+Generate one at [app.crinkl.xyz](https://app.crinkl.xyz) (agent key generation rolling out — not yet available to all users).
 
 ### 2. Set up Gmail OAuth
 
@@ -46,12 +56,6 @@ Generate one at [app.crinkl.xyz/profile/agent-keys](https://app.crinkl.xyz/profi
 2. [Enable the Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com)
 
 ### 3. Run
-
-```bash
-npx crinkl-agent
-```
-
-Or clone and run locally:
 
 ```bash
 git clone https://github.com/crinkl-protocol/crinkl-agent.git
@@ -76,7 +80,7 @@ crinkl-agent --help     Show help
 
 ```bash
 # Every 6 hours
-0 */6 * * * cd /path/to/crinkl-agent && npx crinkl-agent >> ~/.crinkl/agent.log 2>&1
+0 */6 * * * cd /path/to/crinkl-agent && npm run dev >> ~/.crinkl/agent.log 2>&1
 ```
 
 ## Vendor parsers

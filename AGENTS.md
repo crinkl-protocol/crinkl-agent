@@ -4,7 +4,7 @@ Machine-readable instructions for AI agents interacting with this repository.
 
 ## What this repo is
 
-`crinkl-agent` is an open-source CLI tool that earns Bitcoin from email receipts. It scans Gmail for DKIM-signed billing emails, submits them to the Crinkl protocol for cryptographic attestation, and the user receives sats over Lightning.
+`crinkl-agent` is an open-source CLI tool that scans Gmail for DKIM-signed billing emails, submits them to the Crinkl protocol for cryptographic verification, and routes sats to the submitting wallet over Lightning.
 
 **Repository**: `crinkl-protocol/crinkl-agent`
 **Language**: TypeScript (strict, ESM)
@@ -30,16 +30,16 @@ Available tools:
 - `verify-email-receipt` — preview DKIM verification without submitting
 - `allowed-vendors` — list currently approved vendor domains
 
-You need a Crinkl API key (`x-api-key` header). The user generates one at `https://app.crinkl.xyz/profile/agent-keys`.
+You need a Crinkl API key (`x-api-key` header). Agent key generation is rolling out at `https://app.crinkl.xyz` — not yet available to all users.
 
 ## If you are helping a user run this agent
 
 ### Setup
 
-1. User needs a Crinkl API key from `https://app.crinkl.xyz/profile/agent-keys`
+1. User needs a Crinkl API key from `https://app.crinkl.xyz` (agent key generation rolling out — not yet available to all users)
 2. User needs Google OAuth credentials (Desktop app type) from `https://console.cloud.google.com/apis/credentials` with Gmail API enabled
 3. Create `.env` from `.env.example` with both credentials
-4. Run: `npx crinkl-agent`
+4. Run: `npm run dev`
 
 ### Commands
 
