@@ -78,8 +78,9 @@ Canonical list: [`vendors/allowlist.json`](vendors/allowlist.json)
 | Stripe | `stripe.com` | Payments |
 | Suno | `suno.com` | SaaS |
 | Gamma | `gamma.app` | SaaS |
+| OpenAI | `openai.com` | SaaS |
 
-**Cannot support (no emailed receipts):** OpenAI, Anthropic — dashboard-only invoices, no DKIM.
+**Cannot support (no emailed receipts):** Anthropic — dashboard-only invoices, no DKIM.
 
 > Want to add a vendor? Add it to [`vendors/allowlist.json`](vendors/allowlist.json) and open a PR. Once merged, the domain goes live on the API. Everyone running the agent earns from it.
 

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-02-27",
   "vendors": [
     {
@@ -21,13 +21,14 @@
       "domain": "gamma.app",
       "name": "Gamma",
       "category": "saas"
+    },
+    {
+      "domain": "openai.com",
+      "name": "OpenAI",
+      "category": "saas"
     }
   ],
   "unsupported": [
-    {
-      "name": "OpenAI",
-      "reason": "No emailed receipts. Invoices behind dashboard download only."
-    },
     {
       "name": "Anthropic",
       "reason": "No emailed receipts. Invoices behind dashboard download only."
