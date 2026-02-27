@@ -4,11 +4,7 @@
 
 **DKIM-signed email receipts → verified spend tokens → sats over Lightning.**
 
-[![CI](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/crinkl-protocol/crinkl-agent/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-F7931A.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A520-18102A.svg)](https://nodejs.org)
-
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Add a vendor](#contributing) · [MCP](#for-ai-agents--mcp-clients) · [Privacy](#privacy)
+[How it works](#how-it-works) · [Quick start](#quick-start) · [Vendors](#supported-vendors) · [MCP](#for-ai-agents--mcp-clients) · [Privacy](#privacy)
 
 </div>
 
@@ -130,7 +126,6 @@ This agent runs entirely on your machine. Here's what leaves it:
 - **Read-only Gmail access.** `gmail.readonly` scope — cannot send, delete, or modify.
 - **No inbox access shared.** Crinkl receives individual emails, not inbox access.
 - **OAuth token stays local.** Stored at `~/.crinkl/gmail-credentials.json`, never transmitted.
-- **Open source.** Audit every line.
 
 ## Contributing
 
