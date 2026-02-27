@@ -13,7 +13,7 @@ import { createInterface } from "node:readline";
 import type { Config } from "./config.js";
 
 const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
-const REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+const REDIRECT_URI = "http://localhost";
 
 interface StoredCredentials {
   access_token: string;
@@ -48,9 +48,21 @@ export async function getGmailClient(config: Config) {
   console.log("\n--- Gmail Authorization ---");
   console.log("1. Open this URL in your browser:\n");
   console.log(`   ${authUrl}\n`);
-  console.log("2. Authorize the app and paste the code below.\n");
+  console.log("2. Authorize the app. You'll be redirected to a page that won't load.");
+  console.log("3. Copy the FULL URL from your browser's address bar and paste it below.\n");
+  console.log("   It will look like: http://localhost?code=4/0AQ...\n");
 
-  const code = await prompt("Authorization code: ");
+  const rawUrl = await prompt("Paste the full redirect URL: ");
+
+  // Extract code from the pasted URL
+  let code: string;
+  if (rawUrl.startsWith("http")) {
+    const url = new URL(rawUrl);
+    code = url.searchParams.get("code") || rawUrl;
+  } else {
+    code = rawUrl;
+  }
+
   const { tokens } = await oauth2.getToken(code);
   oauth2.setCredentials(tokens);
 
