@@ -85,7 +85,7 @@ Canonical list: [`vendors/allowlist.json`](vendors/allowlist.json)
 
 **Cannot support (no emailed receipts):** OpenAI, Anthropic — dashboard-only invoices, no DKIM.
 
-> Want to add a vendor? Add it to [`vendors/allowlist.json`](vendors/allowlist.json), write a parser, and open a PR. Once merged, the domain goes live on the API. Everyone running the agent earns from it. See [CONTRIBUTING.md](CONTRIBUTING.md).
+> Want to add a vendor? Add it to [`vendors/allowlist.json`](vendors/allowlist.json) and open a PR. Once merged, the domain goes live on the API. Everyone running the agent earns from it.
 
 Live API:
 
