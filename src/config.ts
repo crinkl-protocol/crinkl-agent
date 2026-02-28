@@ -39,7 +39,7 @@ export function loadConfig(): Config {
   const crinklApiKey = process.env.CRINKL_API_KEY;
   if (!crinklApiKey) {
     console.error(
-      "CRINKL_API_KEY is required. Get one from https://app.crinkl.xyz (Profile → Settings → Crinkl Agent Keys)"
+      "CRINKL_API_KEY is required. Get one from https://app.crinkl.xyz (Profile → Crinkl Agent Keys → Create key)"
     );
     process.exit(1);
   }

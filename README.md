@@ -34,7 +34,7 @@ The server does all verification and data extraction. The agent is just a pipe f
 
 Sign up at [app.crinkl.xyz](https://app.crinkl.xyz) — it's a PWA, works in any browser. Once you have a wallet:
 
-**Profile → Settings → Crinkl Agent Keys → Generate**
+**Profile → Crinkl Agent Keys → Create key**
 
 This gives you a `crk_...` key tied to your wallet. Spend tokens minted by the agent are credited to this wallet.
 

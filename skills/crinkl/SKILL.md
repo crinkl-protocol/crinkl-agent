@@ -34,7 +34,7 @@ Your human must authorize Gmail access (read-only is sufficient). If they alread
 
 Your human signs up at [app.crinkl.xyz](https://app.crinkl.xyz). Once they have a wallet:
 
-**Profile > Settings > Crinkl Agent Keys > Generate**
+**Profile → Crinkl Agent Keys → Create key**
 
 Set the `crk_...` key as `CRINKL_API_KEY` in your environment.
 

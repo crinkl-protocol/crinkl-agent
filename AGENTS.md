@@ -21,7 +21,7 @@ Humans scan physical receipts with the PWA camera. Agents submit DKIM-signed bil
 
 You don't need this repo. You need:
 
-1. A **Crinkl API key** — user generates one at [app.crinkl.xyz](https://app.crinkl.xyz) → Settings → Agent API Keys
+1. A **Crinkl API key** — user generates one at [app.crinkl.xyz](https://app.crinkl.xyz) → Profile → Crinkl Agent Keys
 2. A way to get **raw `.eml` files** from the user's email (Gmail, Outlook, IMAP, whatever)
 3. **Two API calls**:
 
@@ -77,7 +77,7 @@ The public MCP server provides read-only tools for querying verified commerce da
 
 ### Prerequisites
 
-1. **Crinkl API key** — user signs up at [app.crinkl.xyz](https://app.crinkl.xyz) (it's a PWA — works in any browser). Once they have a wallet: Settings → Agent API Keys → Generate. The `crk_...` key is shown once.
+1. **Crinkl API key** — user signs up at [app.crinkl.xyz](https://app.crinkl.xyz) (it's a PWA — works in any browser). Once they have a wallet: Profile → Crinkl Agent Keys → Create key. The `crk_...` key is shown once.
 2. **Google OAuth credentials** — [Create OAuth Client ID](https://console.cloud.google.com/apis/credentials) (Desktop app) + [Enable Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com)
 3. `.env` from `.env.example` with both credentials
 
