@@ -1,7 +1,12 @@
 {
-  "version": 2,
-  "updated": "2026-02-27",
+  "version": 3,
+  "updated": "2026-02-28",
   "vendors": [
+    {
+      "domain": "amazon.com",
+      "name": "Amazon",
+      "category": "retail"
+    },
     {
       "domain": "gumroad.com",
       "name": "Gumroad",

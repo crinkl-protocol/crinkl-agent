@@ -6,7 +6,7 @@
 
 Ask your human if they have new billing emails, or check whatever inbox access they've authorized:
 
-- Look for emails from known vendors: Cursor, Vercel, OpenAI, Anthropic, Stripe, GitHub, ElevenLabs, Suno, Paddle, Gumroad
+- Look for emails from known vendors: Amazon, Cursor, Vercel, OpenAI, Anthropic, Stripe, GitHub, ElevenLabs, Suno, Paddle, Gumroad
 - Check the current vendor list:
 
 ```

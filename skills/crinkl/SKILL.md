@@ -12,7 +12,7 @@ Submit your human's DKIM-signed billing emails to Crinkl and earn Bitcoin over L
 
 ## What This Does
 
-Your human has billing emails from SaaS vendors (Cursor, Vercel, OpenAI, Anthropic, Stripe, etc.) sitting in Gmail. Each one has a DKIM signature from the vendor's mail server — a cryptographic proof the email is real and unmodified.
+Your human has billing and order confirmation emails from vendors (Amazon, Cursor, Vercel, OpenAI, Stripe, etc.) sitting in Gmail. Each one has a DKIM signature from the vendor's mail server — a cryptographic proof the email is real and unmodified.
 
 This skill lets you submit those emails to Crinkl's verification API. The server verifies the DKIM signature, extracts invoice data, and mints a spend token. The wallet earns ~147 sats per verified receipt at current BTC prices.
 
@@ -99,7 +99,8 @@ Want to add a vendor? Just submit an email from them.
 
 ## What Earns Sats
 
-Any DKIM-signed billing email from a supported vendor:
+Any DKIM-signed billing or order confirmation email from a supported vendor:
+- Retail (Amazon order confirmations, shipping confirmations)
 - SaaS subscriptions (Cursor, Vercel, OpenAI, Anthropic, GitHub, etc.)
 - Billing through Stripe, Paddle, Gumroad
 - Any vendor that sends DKIM-signed email receipts
