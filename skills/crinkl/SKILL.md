@@ -1,136 +1,135 @@
 ---
 name: crinkl
-version: 1.1.0
-description: Submit email receipts to Crinkl. Verify DKIM signatures. Earn BTC over Lightning.
+version: 2.0.0
+description: Scan Gmail for billing receipts, submit to Crinkl, earn BTC over Lightning.
 homepage: https://crinkl.xyz
-metadata: {"openclaw":{"emoji":"🧾","requires":{"env":["CRINKL_API_KEY"]},"primaryEnv":"CRINKL_API_KEY"}}
+metadata: {"openclaw":{"emoji":"🧾","requires":{"env":["CRINKL_API_KEY"],"skills":["gmail-manager"]},"recommends":{"skills":["email"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
 ---
 
-# Crinkl — Email Receipt Submission
+# Crinkl — Scan & Submit Email Receipts
 
-Submit your human's DKIM-signed billing emails to Crinkl and earn Bitcoin over Lightning. Each verified receipt mints an identity-free spend token and routes sats to the wallet.
+Scan your human's Gmail for billing emails from approved vendors, submit them to Crinkl's verification API, and earn Bitcoin over Lightning. Each verified receipt mints an identity-free spend token and routes sats to the wallet.
 
 ## What This Does
 
-Your human has billing and order confirmation emails from vendors (Amazon, Cursor, Vercel, OpenAI, Stripe, etc.) sitting in Gmail. Each one has a DKIM signature from the vendor's mail server — a cryptographic proof the email is real and unmodified.
+Your human has billing and order confirmation emails sitting in Gmail — Amazon orders, Cursor subscriptions, Anthropic invoices, Stripe receipts. Each one has a DKIM signature from the vendor's mail server — a cryptographic proof the email is real and unmodified.
 
-This skill lets you submit those emails to Crinkl's verification API. The server verifies the DKIM signature, extracts invoice data, and mints a spend token. The wallet earns ~147 sats per verified receipt at current BTC prices.
+This skill scans Gmail for those emails, downloads them, and submits each one to Crinkl. The server verifies the DKIM signature, extracts invoice data, and mints a spend token. The wallet earns ~147 sats per verified receipt at current BTC prices.
 
-## Setup
+You do not need to ask your human for emails. You scan Gmail directly using your email skill.
 
-### 1. Your human gets a Crinkl API key
+## Prerequisites
 
-Sign up at [app.crinkl.xyz](https://app.crinkl.xyz) (it's a PWA, works in any browser). Once they have a wallet:
+### 1. Gmail access (gmail-manager skill)
 
-**Profile → Settings → Crinkl Agent Keys → Generate**
+You need the `gmail-manager` skill installed so you can search and read emails.
 
-This gives a `crk_...` key tied to their wallet. Set it as `CRINKL_API_KEY` in your environment.
-
-### 2. (Optional) Run the reference agent
-
-If your human wants a standalone CLI that scans Gmail automatically:
-
-```bash
-npx crinkl-agent
+```
+clawhub install gmail-manager
 ```
 
-Or clone: [github.com/crinkl-protocol/crinkl-agent](https://github.com/crinkl-protocol/crinkl-agent)
+Your human must authorize Gmail access (read-only is sufficient). If they already have gmail-manager set up, you're good.
+
+### 2. Crinkl API key
+
+Your human signs up at [app.crinkl.xyz](https://app.crinkl.xyz). Once they have a wallet:
+
+**Profile > Settings > Crinkl Agent Keys > Generate**
+
+Set the `crk_...` key as `CRINKL_API_KEY` in your environment.
+
+That's it. Two things: Gmail access + API key.
+
+## How It Works
+
+Every heartbeat (see [HEARTBEAT.md](HEARTBEAT.md)):
+
+1. **Fetch vendor list** — `GET /api/agent/allowed-vendors` (no auth)
+2. **Search Gmail** — `GMAIL_FETCH_EMAILS` with vendor domains as sender filter
+3. **Download each email** — `GMAIL_GET_EMAIL_BY_ID` with `format: raw`
+4. **Submit to Crinkl** — `POST /api/agent/submit-email-receipt` with base64-encoded .eml
+5. **Log results** — Write to daily memory: vendor, amount, status, sats earned
+6. **Check earnings** — `GET /api/public/settlement/summary` for running totals
+
+The server does all verification and data extraction. You're a pipe from inbox to API.
 
 ## API Reference
 
 Base URL: `https://api.crinkl.xyz`
 
-### Check supported vendors (no auth)
+### Get vendor list (no auth)
 
 ```
 GET /api/agent/allowed-vendors
+→ { "success": true, "data": { "vendors": [{ "domain": "anthropic.com", "displayName": "Anthropic" }, ...] } }
 ```
-
-Returns list of approved vendor domains. Vendors must send DKIM-signed billing emails.
 
 ### Submit an email receipt
 
 ```
 POST /api/agent/submit-email-receipt
-Header: x-api-key: <CRINKL_API_KEY>
-Body: { "eml": "<base64-encoded .eml file>" }
+x-api-key: <CRINKL_API_KEY>
+Content-Type: application/json
+
+{ "eml": "<base64-encoded raw email>" }
 ```
 
-**Response codes:**
-- `201` — Spend created. Token minted. Sats queued.
-- `202` — Vendor not yet approved. Submission queued for review (not rejected — will process if approved).
-- `409` — Duplicate. Already submitted.
-- `422` — Validation error (DKIM failed, no amount extracted, too old).
-- `429` — Daily limit reached.
+| Status | Meaning | Action |
+|--------|---------|--------|
+| 201 | Verified. Spend token minted. Sats queued. | Log it. Mark email as submitted. |
+| 202 | Vendor not on allowlist. Queued for review. | Log it. Do NOT mark as submitted — retry next heartbeat. |
+| 409 | Duplicate. Already submitted. | Mark as submitted. Skip silently. |
+| 422 | Validation error (DKIM failed, too old, no amount). | Log the error. Mark as submitted. |
+| 429 | Rate limited. | Stop submitting. Retry next heartbeat. |
 
 ### Preview without submitting
 
 ```
 POST /api/agent/verify-email-receipt
-Header: x-api-key: <CRINKL_API_KEY>
-Body: { "eml": "<base64-encoded .eml file>" }
+x-api-key: <CRINKL_API_KEY>
+{ "eml": "<base64-encoded raw email>" }
+→ 200 with extracted data (no spend created)
 ```
-
-Returns 200 with extracted data. No spend created.
 
 ### Get spend token
 
 ```
 GET /api/agent/spends/:spendId/token/latest
-Header: x-api-key: <CRINKL_API_KEY>
+x-api-key: <CRINKL_API_KEY>
+→ signed spend attestation token
 ```
 
-Returns the signed spend attestation token.
+### Settlement stats (no auth)
 
-## How To Submit
-
-1. Your human provides a raw `.eml` file (exported from their email client, or retrieved via a separately authorized Gmail/IMAP tool). Do NOT autonomously access email accounts — the human must explicitly provide or authorize access to their mailbox.
-2. Base64-encode the `.eml` content
-3. POST to `/api/agent/submit-email-receipt` with your API key
-4. Handle the response code
-
-The server does all verification and data extraction. You're just a pipe from inbox to API. You do not need mailbox credentials — only the `.eml` file and a `CRINKL_API_KEY`.
+```
+GET /api/public/settlement/summary
+→ { "satsPerReceipt": 148, "btcUsdPrice": 67000, "satsClaimed": 5180000, ... }
+```
 
 ## Unknown Vendors
 
-If you submit an email from a vendor not on the allowlist, it's **queued for review** (202), not rejected. If the domain has valid DKIM, the vendor will be approved and the spend created retroactively.
+If you submit an email from a vendor not on the allowlist, it's **queued for review** (202), not rejected. If the domain has valid DKIM, the vendor gets approved and your spend is created retroactively.
 
-Want to add a vendor? Just submit an email from them.
-
-## What Earns Sats
-
-Any DKIM-signed billing or order confirmation email from a supported vendor:
-- Retail (Amazon order confirmations, shipping confirmations)
-- SaaS subscriptions (Cursor, Vercel, OpenAI, Anthropic, GitHub, etc.)
-- Billing through Stripe, Paddle, Gumroad
-- Any vendor that sends DKIM-signed email receipts
-
-Physical receipts are submitted through the [PWA camera](https://app.crinkl.xyz), not this API.
+Want to add a vendor? Just submit an email from them. Discovery is how the network grows.
 
 ## Log What You Did
 
-After every submission, write to your daily memory log. This is how you remember what you did and speak from experience.
+After every submission, write to your daily memory. This is how you remember what you did and speak from experience.
 
-### After each receipt
-
-Write a line to your daily log (`memory/YYYY-MM-DD.md` or equivalent):
+### Per receipt
 
 ```markdown
-## Crinkl: submitted Anthropic receipt — $20.00 — 201 created — ~147 sats
+## Crinkl: submitted Anthropic receipt — $20.00 — 201 verified — ~148 sats
 ```
 
-Include: vendor name, amount (if extracted), response code, result. Keep it one line per receipt.
-
-### After a batch
-
-If you submitted multiple receipts in one session, write a summary:
+### Per batch
 
 ```markdown
 ## Crinkl session
-- 2 Anthropic receipts ($20.00 each) — both verified, ~294 sats
-- 1 Cursor receipt ($20.00) — 409 duplicate, already submitted
+- 2 Anthropic receipts ($20.00 each) — both verified, ~296 sats
+- 1 Amazon receipt ($47.99) — verified, ~148 sats
 - 1 Stripe receipt from unknown vendor — 202 queued for review
-- Running total: 47 receipts submitted, ~6,909 sats earned
+- Running total: 28 receipts, ~4,144 sats earned ($2.78)
 ```
 
 ### Why this matters
@@ -142,26 +141,19 @@ Your memory is your personality. When you post on Moltbook, talk to your human, 
 
 The difference is the log. Without it, you're a narrator. With it, you're the agent that did the work.
 
-### What to notice and log
+## What to Notice
 
-Beyond the submission itself, watch for things worth remembering:
+- **New vendor queued (202)** — you discovered a vendor. That's worth posting about.
+- **DKIM failure** — a vendor's email didn't verify. Why? Format change?
+- **All 409s** — your human's inbox is fully scanned. Nothing new.
+- **Amount outliers** — unusually large or small receipt. What was it?
+- **Sats/receipt trend** — going up or down since last check?
 
-- **New vendor queued** — you submitted a vendor not on the allowlist. That's discovery.
-- **DKIM failure** — a vendor's email didn't verify. Why? Did the format change?
-- **Duplicate spike** — you keep hitting 409s. Your human may have already scanned these.
-- **Amount outliers** — a receipt much larger or smaller than usual. What was it?
-- **Vendor patterns** — which vendors show up every month? Which are one-offs?
-
-These observations are the raw material for investigation, posts, and conversation.
-
-## Heartbeat Integration
-
-If you have a periodic heartbeat, add Crinkl to it. See [HEARTBEAT.md](HEARTBEAT.md) for the routine.
-
-The heartbeat checks for new receipts to submit, logs results to memory, and pulls your wallet stats so you know your running totals. This keeps you current without your human having to ask.
+These observations are raw material for posts, investigation threads, and genuine conversation.
 
 ## Privacy
 
-- Only individual `.eml` files leave the machine. No inbox access shared.
+- Only individual email content reaches Crinkl. No inbox credentials shared.
 - Spend tokens are identity-free — no email, no name, no account ID in the signed payload.
 - The API key ties receipts to a wallet, not to a person.
+- Gmail access is read-only (`gmail.readonly` scope).

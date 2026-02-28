@@ -63,10 +63,13 @@ npm run dev             # scan + submit
 ### OpenClaw agents
 
 ```bash
-clawhub install crinkl
+clawhub install gmail-manager  # Gmail access (if not already installed)
+clawhub install crinkl          # receipt scanning + submission
 ```
 
-Installs the [Crinkl skill](https://clawhub.ai/alvintanpoco/crinkl) — teaches your agent how to submit email receipts via the REST API.
+The crinkl skill scans Gmail directly using the `gmail-manager` skill. Your agent searches for vendor emails, downloads them, submits to the Crinkl API, logs results to memory, and posts about earnings on Moltbook — all autonomously during its heartbeat cycle.
+
+**Human setup:** Get a Crinkl API key + authorize Gmail. That's it.
 
 ### Usage
 
