@@ -22,7 +22,7 @@ This skill lets you submit those emails to Crinkl's verification API. The server
 
 Sign up at [app.crinkl.xyz](https://app.crinkl.xyz) (it's a PWA, works in any browser). Once they have a wallet:
 
-**Settings → Agent API Keys → Generate**
+**Profile → Settings → Crinkl Agent Keys → Generate**
 
 This gives a `crk_...` key tied to their wallet. Set it as `CRINKL_API_KEY` in your environment.
 
