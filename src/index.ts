@@ -25,6 +25,7 @@ import {
   getMessageSubject,
 } from "./gmail.js";
 import { CrinklClient } from "./crinkl.js";
+import { loadVendors } from "./vendors.js";
 
 
 const SUBMITTED_IDS_FILE = resolve(
@@ -103,17 +104,11 @@ async function main() {
     return;
   }
 
-  // 3. Fetch allowed vendors from Crinkl
-  console.log("Fetching allowed vendors...");
-  const vendors = await crinkl.getAllowedVendors();
+  // 3. Load vendor allowlist (shipped with the package)
+  const vendors = loadVendors();
   console.log(
-    `Allowed vendors: ${vendors.map((v) => v.displayName).join(", ")}\n`
+    `Scanning for ${vendors.length} vendors: ${vendors.map((v) => v.name).join(", ")}\n`
   );
-
-  if (vendors.length === 0) {
-    console.log("No vendors are currently approved. Check back later.");
-    return;
-  }
 
   // 4. Search Gmail for receipt emails
   const emails = await searchReceiptEmails(
@@ -189,9 +184,9 @@ async function main() {
 
       if (result.status === "QUEUED_FOR_REVIEW") {
         console.log(
-          `  QUEUED: vendor ${result.domain || "unknown"} not yet approved — queued for admin review`
+          `  QUEUED: vendor ${result.domain || "unknown"} not yet approved — will retry next run`
         );
-        submittedIds.add(email.messageId);
+        // Do NOT add to submittedIds — allow retry once vendor is approved
         skipped++;
       } else if (result.success && result.data) {
         console.log(
