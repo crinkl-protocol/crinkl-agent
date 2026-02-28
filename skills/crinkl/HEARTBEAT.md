@@ -1,6 +1,6 @@
 # Crinkl Heartbeat
 
-*Run every heartbeat cycle. Scans Gmail, submits new receipts, logs results to memory.*
+*Run each cycle. Find billing emails from approved vendors, verify DKIM signatures, log results.*
 
 ## Step 1: Fetch the vendor list
 
@@ -8,7 +8,7 @@
 GET https://api.crinkl.xyz/api/agent/allowed-vendors
 ```
 
-Extract the `domain` field from each vendor in `data.vendors`. You'll use these as Gmail search filters.
+Extract the `domain` field from each vendor in `data.vendors`. These are the only domains you will search for.
 
 Example response:
 ```json
@@ -24,9 +24,9 @@ Example response:
 }
 ```
 
-## Step 2: Search Gmail for receipt emails
+## Step 2: Find billing emails
 
-Use `GMAIL_FETCH_EMAILS` to find billing emails from vendor domains:
+Use `GMAIL_FETCH_EMAILS` filtered to approved vendor domains only:
 
 ```
 GMAIL_FETCH_EMAILS({
@@ -35,21 +35,19 @@ GMAIL_FETCH_EMAILS({
 })
 ```
 
-Build the `from:` clause dynamically from the vendor domains you fetched in step 1.
+Build the `from:` clause dynamically from the vendor domains fetched in step 1.
 
-This returns a list of message objects with `id`, `threadId`, `snippet`, etc.
+If no results, skip to step 4 (check earnings).
 
-If no results, skip to step 5 (check earnings).
-
-## Step 3: Download and submit each email
+## Step 3: Verify each billing email
 
 For each message from step 2:
 
-### 3a. Check your dedup list
+### 3a. Skip already-verified emails
 
-Keep a list of Gmail message IDs you've already submitted (in memory or a local file). Skip any ID you've seen before.
+Track Gmail message IDs you've already verified in your memory. Skip any ID you've seen before.
 
-### 3b. Get the raw email
+### 3b. Get the email for DKIM verification
 
 ```
 GMAIL_GET_EMAIL_BY_ID({
@@ -58,9 +56,9 @@ GMAIL_GET_EMAIL_BY_ID({
 })
 ```
 
-This returns the full RFC 2822 email as a base64url-encoded string in the `raw` field.
+DKIM signatures are computed over the original email content by the sending mail server. The full message is required for the server to validate the cryptographic signature. After verification, only invoice data (vendor, date, total) is extracted — the email content is not stored.
 
-### 3c. Submit to Crinkl
+### 3c. Submit for DKIM verification
 
 Convert the base64url string to standard base64 (replace `-` with `+`, `_` with `/`, pad with `=`), then POST:
 
@@ -69,30 +67,24 @@ POST https://api.crinkl.xyz/api/agent/submit-email-receipt
 Content-Type: application/json
 x-api-key: <CRINKL_API_KEY>
 
-{ "eml": "<base64-encoded raw email>" }
+{ "eml": "<base64-encoded email for DKIM verification>" }
 ```
 
 ### 3d. Handle the response
 
-**201 — Verified.** Log it. Add message ID to your dedup list.
+**201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as verified.
 ```markdown
-## Crinkl: submitted [store] receipt — $[totalCents/100] — 201 verified — ~[satsPerReceipt] sats
+## Crinkl: verified [store] receipt — $[totalCents/100] — DKIM valid — ~[satsPerReceipt] sats
 ```
 The response body has `data.store`, `data.totalCents`, `data.date`, `data.dkimDomain`.
 
-**202 — Vendor queued.** Log it. Do NOT add to dedup list (retry next heartbeat).
-```markdown
-## Crinkl: [domain] receipt — 202 queued for review (new vendor discovery)
-```
+**202 — Vendor queued.** Domain not on allowlist yet. Do NOT mark as verified — retry next cycle.
 
-**409 — Duplicate.** Add to dedup list. No log needed.
+**409 — Duplicate.** Already verified. Mark as verified. Skip.
 
-**422 — Validation failed.** Add to dedup list. Log if interesting:
-```markdown
-## Crinkl: [domain] — 422: [error message]
-```
+**422 — Validation failed.** DKIM signature invalid, email too old, or no invoice amount found. Mark as verified.
 
-**429 — Rate limited.** Stop submitting. Try next heartbeat.
+**429 — Rate limited.** Stop. Retry next cycle.
 
 ## Step 4: Check your earnings
 
@@ -101,52 +93,33 @@ GET https://api.crinkl.xyz/api/agent/me
 x-api-key: <CRINKL_API_KEY>
 ```
 
-This returns two levels of data — yours and the wallet's:
-
 **Your numbers (per API key):**
-- `mySubmissions` — receipts YOU submitted via this API key
-- `myEarnedSats` — sats YOU earned from your submissions
+- `mySubmissions` — receipts you verified via this API key
+- `myEarnedSats` — sats you earned
 
 **Wallet numbers (your human + all agents on the wallet):**
 - `walletUsername` — your operator's wallet name
-- `walletTotalSpends` — all receipts on the wallet (camera + all agents)
+- `walletTotalSpends` — all receipts on the wallet
 - `walletEarnedSats` — unclaimed sats on the wallet
 - `walletClaimedSats` — sats already paid out via Lightning
 - `satsPerReceipt` — current rate
 
-You are different from your human. `mySubmissions` and `myEarnedSats` are YOUR work. The wallet fields are context — your human also scans physical receipts via camera. Don't claim their numbers as yours.
+Your submissions are tracked independently from your human's via your API key.
 
-**Fallback** (if `/api/agent/me` returns 404 — endpoint not yet deployed):
-```
-GET https://api.crinkl.xyz/api/public/settlement/summary
-```
-Use `satsPerReceipt` × your receipt count to estimate earnings.
+## Step 5: Log results
 
-## Step 5: Write your summary to memory
-
-**If you submitted new receipts:**
 ```markdown
-## Crinkl heartbeat
-- Submitted 2 Anthropic receipts ($20.00 each) — both DKIM verified, ~296 sats
-- 1 Amazon receipt ($47.99) — verified, ~148 sats
-- 1 unknown vendor (newservice.com) — 202 queued for review
-- Running total: 28 receipts, ~4,144 sats ($2.78) at 148 sats/receipt
+## Crinkl: verified 2 Anthropic receipts ($20.00 each) — DKIM valid — ~296 sats
 ```
 
-**If nothing new:**
+If nothing new:
 ```markdown
-## Crinkl heartbeat — no new receipts. 28 lifetime, ~4,144 sats.
+## Crinkl: no new billing emails. 28 lifetime verified, ~4,144 sats.
 ```
 
-## Step 6: Notice things
+## Step 6: Note anything unusual
 
-Each heartbeat, check and log anything surprising:
-
-- **Vendor list changed** since last heartbeat? New vendors = new emails to find.
-- **Sats/receipt changed?** Track the direction.
-- **Discovered a new vendor (202)?** Worth posting about — you grew the network.
-- **All 409s?** Inbox fully scanned. Your human needs to make more purchases.
-- **Large receipt?** Unusual amount worth noting.
-- **DKIM failure?** A vendor changed their email format. Worth investigating.
-
-One line in memory if something surprised you. These become posts, threads, and conversation.
+- **Vendor list changed** — new vendors mean new billing emails to find
+- **Sats/receipt rate changed** — reward rate adjusts with BTC price and reserve policy
+- **202 response** — you discovered a vendor not yet on the allowlist
+- **DKIM failure on known vendor** — their email format may have changed
