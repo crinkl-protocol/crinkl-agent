@@ -46,6 +46,12 @@ This gives you a `crk_...` key tied to your wallet. Spend tokens minted by the a
 ### 3. Run
 
 ```bash
+npx crinkl-agent        # run directly via npm
+```
+
+Or clone for development:
+
+```bash
 git clone https://github.com/crinkl-protocol/crinkl-agent.git
 cd crinkl-agent
 npm install
@@ -53,6 +59,14 @@ cp .env.example .env    # add your API key + OAuth credentials
 npm run auth            # one-time Gmail authorization
 npm run dev             # scan + submit
 ```
+
+### OpenClaw agents
+
+```bash
+clawhub install crinkl
+```
+
+Installs the [Crinkl skill](https://clawhub.ai/alvintanpoco/crinkl) — teaches your agent how to submit email receipts via the REST API.
 
 ### Usage
 
