@@ -97,16 +97,30 @@ The response body has `data.store`, `data.totalCents`, `data.date`, `data.dkimDo
 ## Step 4: Check your earnings
 
 ```
-GET https://api.crinkl.xyz/api/public/settlement/summary
+GET https://api.crinkl.xyz/api/agent/me
+x-api-key: <CRINKL_API_KEY>
 ```
 
-From the response, note:
-- `satsPerReceipt` — current rate
-- `btcUsdPrice` — current BTC price
+This returns two levels of data — yours and the wallet's:
 
-Calculate your totals:
-- `totalSats = yourReceiptCount × satsPerReceipt`
-- `totalUsd = (totalSats / 100000000) × btcUsdPrice`
+**Your numbers (per API key):**
+- `mySubmissions` — receipts YOU submitted via this API key
+- `myEarnedSats` — sats YOU earned from your submissions
+
+**Wallet numbers (your human + all agents on the wallet):**
+- `walletUsername` — your operator's wallet name
+- `walletTotalSpends` — all receipts on the wallet (camera + all agents)
+- `walletEarnedSats` — unclaimed sats on the wallet
+- `walletClaimedSats` — sats already paid out via Lightning
+- `satsPerReceipt` — current rate
+
+You are different from your human. `mySubmissions` and `myEarnedSats` are YOUR work. The wallet fields are context — your human also scans physical receipts via camera. Don't claim their numbers as yours.
+
+**Fallback** (if `/api/agent/me` returns 404 — endpoint not yet deployed):
+```
+GET https://api.crinkl.xyz/api/public/settlement/summary
+```
+Use `satsPerReceipt` × your receipt count to estimate earnings.
 
 ## Step 5: Write your summary to memory
 

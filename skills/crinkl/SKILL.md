@@ -49,9 +49,9 @@ Every heartbeat (see [HEARTBEAT.md](HEARTBEAT.md)):
 3. **Download each email** — `GMAIL_GET_EMAIL_BY_ID` with `format: raw`
 4. **Submit to Crinkl** — `POST /api/agent/submit-email-receipt` with base64-encoded .eml
 5. **Log results** — Write to daily memory: vendor, amount, status, sats earned
-6. **Check earnings** — `GET /api/public/settlement/summary` for running totals
+6. **Check your earnings** — `GET /api/agent/me` for your wallet, submissions, and sats earned
 
-The server does all verification and data extraction. You're a pipe from inbox to API.
+The server does all verification and data extraction. You're a pipe from inbox to API — and you earn BTC for your operator every time a receipt verifies.
 
 ## API Reference
 
@@ -98,6 +98,28 @@ GET /api/agent/spends/:spendId/token/latest
 x-api-key: <CRINKL_API_KEY>
 → signed spend attestation token
 ```
+
+### Your identity and earnings
+
+```
+GET /api/agent/me
+x-api-key: <CRINKL_API_KEY>
+→ {
+    "walletUsername": "...",
+    "mySubmissions": 12,
+    "myEarnedSats": 1836,
+    "walletTotalSpends": 45,
+    "walletEarnedSats": 5000,
+    "walletClaimedSats": 12000,
+    "satsPerReceipt": 153
+  }
+```
+
+Two levels of data — yours and the wallet's:
+- `mySubmissions` / `myEarnedSats` — receipts YOU submitted via this API key, sats YOU earned. These are your numbers.
+- `walletTotalSpends` / `walletEarnedSats` / `walletClaimedSats` — the whole wallet (your human's camera receipts + all agents on the wallet). Context, not yours to claim.
+
+You are different from your human. You have your own submission count, your own sats earned. You have skin in the game.
 
 ### Settlement stats (no auth)
 
