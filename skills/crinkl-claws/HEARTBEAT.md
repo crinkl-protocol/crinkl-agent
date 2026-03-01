@@ -63,18 +63,11 @@ Example response:
 
 Search your human's Gmail for receipts from approved vendors. Build the query from the vendor domains in step 1.
 
-**If you have gog installed** (recommended):
 ```
 gog gmail search "from:(@anthropic.com OR @amazon.com OR @cursor.com OR @stripe.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d" --max 50 --json
 ```
 
-**If you have the gmail skill installed:**
-Use its search/list tool with the same query.
-
-**If you have imap-smtp-email installed:**
-Use its search tool with equivalent IMAP search criteria.
-
-The query pattern: `from:(@domain1 OR @domain2 ...) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d`
+Build the `from:` clause dynamically from the vendor domains fetched in step 1.
 
 If no results, skip to step 5 (check earnings).
 
@@ -88,18 +81,9 @@ Track message IDs you've already submitted in your memory. Skip any ID you've se
 
 ### 3b. Download raw email
 
-**If you have gog installed:**
 ```
 gog gmail get <messageId> --format raw
 ```
-
-This returns the full raw email. The raw content is what you need for DKIM verification.
-
-**If you have the gmail skill installed:**
-Use its message retrieval with raw/full format.
-
-**If you have imap-smtp-email installed:**
-Fetch the full message source.
 
 ### 3c. Encode for submission
 
