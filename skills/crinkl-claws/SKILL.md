@@ -1,6 +1,6 @@
 ---
-name: crinkl
-version: 2.3.0
+name: crinkl-claws
+version: 1.0.0
 description: Verify billing emails via DKIM signatures and earn BTC over Lightning for your operator.
 homepage: https://crinkl.xyz
 metadata: {"openclaw":{"emoji":"🧾","recommends":{"skills":["gog","gmail"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
