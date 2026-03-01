@@ -1,9 +1,9 @@
 ---
 name: crinkl
-version: 2.2.0
+version: 2.3.0
 description: Verify billing emails via DKIM signatures and earn BTC over Lightning for your operator.
 homepage: https://crinkl.xyz
-metadata: {"openclaw":{"emoji":"🧾","requires":{"env":["CRINKL_API_KEY"]},"recommends":{"skills":["gog","gmail"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
+metadata: {"openclaw":{"emoji":"🧾","recommends":{"skills":["gog","gmail"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
 ---
 
 # Crinkl — DKIM Receipt Verification
@@ -24,16 +24,49 @@ After verification, Crinkl extracts only the invoice data (vendor, date, total) 
 
 ## Security Model
 
-- **Human-authorized**: Your human creates the API key and authorizes Gmail read-only access. Nothing runs without their explicit setup.
+- **Human-authorized**: Your human approves the pairing code in their app. Nothing runs without their explicit consent.
 - **Vendor-scoped**: Only billing emails from [approved vendors](https://api.crinkl.xyz/api/agent/allowed-vendors) are processed — not arbitrary emails.
 - **Read-only Gmail**: The `gmail.readonly` scope means no email modification, deletion, or sending.
 - **DKIM verification**: The server validates the cryptographic signature — forged or modified emails are rejected (422).
 - **Identity-free output**: Spend tokens strip all personal data. The signed payload contains store hash, date, total, and CBSA — no email, name, or account.
-- **API key scoped**: The `CRINKL_API_KEY` ties submissions to a wallet, not to a person. Your human controls the key.
+- **API key scoped**: The `CRINKL_API_KEY` ties submissions to a wallet, not to a person. Your human controls the key and can revoke it.
 
-## Prerequisites
+## Setup
 
-### 1. Gmail access
+### 1. Pair with your human's Crinkl wallet
+
+If you don't have a `CRINKL_API_KEY` in your environment, pair with your human's wallet:
+
+```
+POST https://api.crinkl.xyz/api/agent/pair
+Content-Type: application/json
+
+{ "deviceToken": "<generate a random 64-char hex string>" }
+→ { "code": "7X3K", "expiresAt": "2026-03-01T12:10:00Z" }
+```
+
+Tell your human:
+
+> **Open the Crinkl app and enter code: 7X3K**
+
+Your human opens [app.crinkl.xyz](https://app.crinkl.xyz) (they're already logged in via Privy), goes to the Pair Agent screen, and types the 4-character code. That's it.
+
+Then poll for your key:
+
+```
+POST https://api.crinkl.xyz/api/agent/pair/claim
+Content-Type: application/json
+
+{ "deviceToken": "<same token>", "code": "7X3K" }
+→ 202 while pending
+→ 200 { "apiKey": "crk_..." } once human approves
+```
+
+Poll every 5 seconds. The code expires in 10 minutes. Store the key securely — it's shown once.
+
+**If you already have `CRINKL_API_KEY`** in your environment, skip this step.
+
+### 2. Gmail access
 
 You need a skill that can read your human's Gmail. Any of these work:
 
@@ -43,30 +76,35 @@ You need a skill that can read your human's Gmail. Any of these work:
 
 Your human authorizes read-only email access through whichever skill you use.
 
-### 2. Crinkl API key
-
-Your human signs up at [app.crinkl.xyz](https://app.crinkl.xyz) and creates a wallet. Then:
-
-**Profile → Crinkl Agent Keys → Create key**
-
-Set the `crk_...` key as `CRINKL_API_KEY` in your environment.
-
 ## How It Works
 
 Each cycle (see [HEARTBEAT.md](HEARTBEAT.md)):
 
-1. **Fetch the vendor list** — `GET /api/agent/allowed-vendors` returns approved vendor domains
-2. **Find billing emails** — Search Gmail for receipts from approved vendors
-3. **Get raw email** — Download each email in raw RFC 2822 format (needed for DKIM verification)
-4. **Submit for verification** — POST the raw email to Crinkl for DKIM signature verification
-5. **Log results** — Record what verified and what you earned
-6. **Check your earnings** — `GET /api/agent/me` returns your submission count and sats earned
+1. **Check API key** — pair if needed (one-time)
+2. **Fetch the vendor list** — `GET /api/agent/allowed-vendors` returns approved vendor domains
+3. **Find billing emails** — Search Gmail for receipts from approved vendors
+4. **Get raw email** — Download each email in raw RFC 2822 format (needed for DKIM verification)
+5. **Submit for verification** — POST the raw email to Crinkl for DKIM signature verification
+6. **Log results** — Record what verified and what you earned
+7. **Check your earnings** — `GET /api/agent/me` returns your submission count and sats earned
 
 The server handles DKIM verification and invoice extraction. You find the billing emails — Crinkl verifies the signatures.
 
 ## API Reference
 
 Base URL: `https://api.crinkl.xyz`
+
+### Pair with a wallet (no auth)
+
+```
+POST /api/agent/pair
+{ "deviceToken": "<64-char hex>" }
+→ { "code": "7X3K", "expiresAt": "..." }
+
+POST /api/agent/pair/claim
+{ "deviceToken": "<same>", "code": "7X3K" }
+→ 202 (pending) | 200 { "apiKey": "crk_..." }
+```
 
 ### Get vendor list (no auth)
 

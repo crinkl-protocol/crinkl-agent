@@ -21,7 +21,7 @@ Humans scan physical receipts with the PWA camera. Agents submit DKIM-signed bil
 
 You don't need this repo. You need:
 
-1. A **Crinkl API key** — user generates one at [app.crinkl.xyz](https://app.crinkl.xyz) → Profile → Crinkl Agent Keys
+1. A **Crinkl API key** — either pair via the device code flow (see below) or user generates one at [app.crinkl.xyz](https://app.crinkl.xyz) → Profile → Crinkl Agent Keys
 2. A way to get **raw `.eml` files** from the user's email (Gmail, Outlook, IMAP, whatever)
 3. **Two API calls**:
 
@@ -46,6 +46,27 @@ curl -X POST https://api.crinkl.xyz/api/agent/submit-email-receipt \
 Unknown vendors are **queued, not rejected**. If a user submits an email from a new vendor domain with valid DKIM, it enters a review queue. On approval, the vendor is added to the allowlist and the spend is created retroactively.
 
 ## API reference
+
+### Pairing (no auth — one-time setup)
+
+```bash
+# 1. Start pairing — generate a device token (64-char hex), get a 4-char code
+curl -X POST https://api.crinkl.xyz/api/agent/pair \
+  -H "Content-Type: application/json" \
+  -d '{"deviceToken": "<64-char hex>"}'
+# → { "code": "7X3K", "expiresAt": "..." }
+
+# 2. Tell user: "Open Crinkl app, enter code 7X3K"
+#    User approves in app (Privy-authenticated)
+
+# 3. Poll for key (every 5s)
+curl -X POST https://api.crinkl.xyz/api/agent/pair/claim \
+  -H "Content-Type: application/json" \
+  -d '{"deviceToken": "<same>", "code": "7X3K"}'
+# → 202 (pending) | 200 { "apiKey": "crk_..." } | 410 (expired)
+```
+
+Codes expire in 10 minutes. Single-use. Rate-limited.
 
 ### Public (no auth)
 

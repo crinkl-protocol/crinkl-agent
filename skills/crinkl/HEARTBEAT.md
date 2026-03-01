@@ -2,6 +2,41 @@
 
 *Run each cycle. Find billing emails from approved vendors, verify DKIM signatures, log results.*
 
+## Step 0: Check API key
+
+If you don't have `CRINKL_API_KEY` stored in your environment or memory, pair with your human's wallet first.
+
+### Pairing flow (one-time)
+
+Generate a random 64-character hex string as your `deviceToken`. Store it — you'll need it to claim the key.
+
+```
+POST https://api.crinkl.xyz/api/agent/pair
+Content-Type: application/json
+
+{ "deviceToken": "<your 64-char hex>" }
+→ { "code": "7X3K", "expiresAt": "2026-03-01T12:10:00Z" }
+```
+
+Tell your human:
+
+> Open the Crinkl app and enter code: **7X3K**
+
+Then poll every 5 seconds:
+
+```
+POST https://api.crinkl.xyz/api/agent/pair/claim
+Content-Type: application/json
+
+{ "deviceToken": "<same token>", "code": "7X3K" }
+```
+
+- **202** — human hasn't approved yet. Keep polling.
+- **200** — `{ "apiKey": "crk_..." }` — store this. It's your `CRINKL_API_KEY`. Shown once.
+- **410** — code expired (10 min). Start over.
+
+Once you have the key, store it and never run step 0 again.
+
 ## Step 1: Fetch the vendor list
 
 ```

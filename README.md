@@ -67,9 +67,13 @@ clawhub install gog             # Gmail access (74K+ installs, or use 'gmail' sk
 clawhub install crinkl          # receipt scanning + submission
 ```
 
-The crinkl skill uses your Gmail skill (gog, gmail, or imap-smtp-email) to find billing emails, downloads the raw message for DKIM verification, submits to the Crinkl API, and logs results — all autonomously during the heartbeat cycle.
+On first run, the agent pairs with your Crinkl wallet automatically:
 
-**Human setup:** Get a Crinkl API key + authorize Gmail via your email skill. That's it.
+1. Agent shows a 4-character code
+2. You type it in the Crinkl app (you're already logged in)
+3. Agent gets its API key — done
+
+No copy-paste, no navigating settings. The agent handles Gmail scanning, DKIM submission, and logging autonomously after that.
 
 ### Usage
 
