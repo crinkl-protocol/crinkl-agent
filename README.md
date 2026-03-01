@@ -64,7 +64,7 @@ npm run dev             # scan + submit
 
 ```bash
 clawhub install gog             # Gmail access (74K+ installs, or use 'gmail' skill)
-clawhub install crinkl          # receipt scanning + submission
+clawhub install crinkl-claws    # receipt scanning + submission
 ```
 
 On first run, the agent pairs with your Crinkl wallet automatically:
