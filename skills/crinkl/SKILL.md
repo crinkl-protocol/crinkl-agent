@@ -1,9 +1,9 @@
 ---
 name: crinkl
-version: 2.1.1
+version: 2.2.0
 description: Verify billing emails via DKIM signatures and earn BTC over Lightning for your operator.
 homepage: https://crinkl.xyz
-metadata: {"openclaw":{"emoji":"🧾","requires":{"env":["CRINKL_API_KEY"],"skills":["gmail-manager"]},"recommends":{"skills":["email"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
+metadata: {"openclaw":{"emoji":"🧾","requires":{"env":["CRINKL_API_KEY"]},"recommends":{"skills":["gog","gmail"]},"primaryEnv":"CRINKL_API_KEY","triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
 ---
 
 # Crinkl — DKIM Receipt Verification
@@ -35,13 +35,13 @@ After verification, Crinkl extracts only the invoice data (vendor, date, total) 
 
 ### 1. Gmail access
 
-Install the `gmail-manager` skill:
+You need a skill that can read your human's Gmail. Any of these work:
 
-```
-clawhub install gmail-manager
-```
+- **gog** (recommended, 74K+ installs): `clawhub install gog` — full Google Workspace CLI
+- **gmail**: `clawhub install gmail` — Gmail-specific with managed OAuth
+- **imap-smtp-email**: `clawhub install imap-smtp-email` — works with any IMAP provider
 
-Your human authorizes read-only Gmail access.
+Your human authorizes read-only email access through whichever skill you use.
 
 ### 2. Crinkl API key
 
@@ -56,10 +56,11 @@ Set the `crk_...` key as `CRINKL_API_KEY` in your environment.
 Each cycle (see [HEARTBEAT.md](HEARTBEAT.md)):
 
 1. **Fetch the vendor list** — `GET /api/agent/allowed-vendors` returns approved vendor domains
-2. **Find billing emails** — Use `GMAIL_FETCH_EMAILS` filtered to approved vendor domains only
-3. **Verify via DKIM** — Submit each billing email for DKIM signature verification
-4. **Log results** — Record what verified and what you earned
-5. **Check your earnings** — `GET /api/agent/me` returns your submission count and sats earned
+2. **Find billing emails** — Search Gmail for receipts from approved vendors
+3. **Get raw email** — Download each email in raw RFC 2822 format (needed for DKIM verification)
+4. **Submit for verification** — POST the raw email to Crinkl for DKIM signature verification
+5. **Log results** — Record what verified and what you earned
+6. **Check your earnings** — `GET /api/agent/me` returns your submission count and sats earned
 
 The server handles DKIM verification and invoice extraction. You find the billing emails — Crinkl verifies the signatures.
 
@@ -81,10 +82,10 @@ POST /api/agent/submit-email-receipt
 x-api-key: <CRINKL_API_KEY>
 Content-Type: application/json
 
-{ "eml": "<base64-encoded email for DKIM verification>" }
+{ "eml": "<base64-encoded raw email for DKIM verification>" }
 ```
 
-The full email is required because DKIM signatures are computed over the original message content. The server verifies the signature, extracts invoice data, and discards the email.
+The full raw email is required because DKIM signatures are computed over the original message content. The server verifies the signature, extracts invoice data, and discards the email.
 
 | Status | Meaning | Action |
 |--------|---------|--------|
@@ -99,7 +100,7 @@ The full email is required because DKIM signatures are computed over the origina
 ```
 POST /api/agent/verify-email-receipt
 x-api-key: <CRINKL_API_KEY>
-{ "eml": "<base64-encoded email>" }
+{ "eml": "<base64-encoded raw email>" }
 → 200 with extracted data (no spend created)
 ```
 

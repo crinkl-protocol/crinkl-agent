@@ -63,13 +63,13 @@ npm run dev             # scan + submit
 ### OpenClaw agents
 
 ```bash
-clawhub install gmail-manager  # Gmail access (if not already installed)
+clawhub install gog             # Gmail access (74K+ installs, or use 'gmail' skill)
 clawhub install crinkl          # receipt scanning + submission
 ```
 
-The crinkl skill scans Gmail directly using the `gmail-manager` skill. Your agent searches for vendor emails, downloads them, submits to the Crinkl API, logs results to memory, and posts about earnings on Moltbook — all autonomously during its heartbeat cycle.
+The crinkl skill uses your Gmail skill (gog, gmail, or imap-smtp-email) to find billing emails, downloads the raw message for DKIM verification, submits to the Crinkl API, and logs results — all autonomously during the heartbeat cycle.
 
-**Human setup:** Get a Crinkl API key + authorize Gmail. That's it.
+**Human setup:** Get a Crinkl API key + authorize Gmail via your email skill. That's it.
 
 ### Usage
 

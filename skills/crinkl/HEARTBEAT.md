@@ -26,51 +26,66 @@ Example response:
 
 ## Step 2: Find billing emails
 
-Use `GMAIL_FETCH_EMAILS` filtered to approved vendor domains only:
+Search your human's Gmail for receipts from approved vendors. Build the query from the vendor domains in step 1.
 
+**If you have gog installed** (recommended):
 ```
-GMAIL_FETCH_EMAILS({
-  q: "from:(@anthropic.com OR @amazon.com OR @cursor.com OR @stripe.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d",
-  maxResults: 50
-})
+gog gmail search "from:(@anthropic.com OR @amazon.com OR @cursor.com OR @stripe.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d" --max 50 --json
 ```
 
-Build the `from:` clause dynamically from the vendor domains fetched in step 1.
+**If you have the gmail skill installed:**
+Use its search/list tool with the same query.
 
-If no results, skip to step 4 (check earnings).
+**If you have imap-smtp-email installed:**
+Use its search tool with equivalent IMAP search criteria.
 
-## Step 3: Verify each billing email
+The query pattern: `from:(@domain1 OR @domain2 ...) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d`
 
-For each message from step 2:
+If no results, skip to step 5 (check earnings).
+
+## Step 3: Get the raw email
+
+For each message from step 2, you need the **raw RFC 2822 email** — this is required because DKIM signatures are computed over the original message content.
 
 ### 3a. Skip already-verified emails
 
-Track Gmail message IDs you've already verified in your memory. Skip any ID you've seen before.
+Track message IDs you've already submitted in your memory. Skip any ID you've seen before.
 
-### 3b. Get the email for DKIM verification
+### 3b. Download raw email
 
+**If you have gog installed:**
 ```
-GMAIL_GET_EMAIL_BY_ID({
-  id: "<messageId>",
-  format: "raw"
-})
+gog gmail get <messageId> --format raw
 ```
 
-DKIM signatures are computed over the original email content by the sending mail server. The full message is required for the server to validate the cryptographic signature. After verification, only invoice data (vendor, date, total) is extracted — the email content is not stored.
+This returns the full raw email. The raw content is what you need for DKIM verification.
 
-### 3c. Submit for DKIM verification
+**If you have the gmail skill installed:**
+Use its message retrieval with raw/full format.
 
-Convert the base64url string to standard base64 (replace `-` with `+`, `_` with `/`, pad with `=`), then POST:
+**If you have imap-smtp-email installed:**
+Fetch the full message source.
+
+### 3c. Encode for submission
+
+The raw email must be submitted as **standard base64**. If the email content is returned as base64url (common in Gmail API responses), convert it:
+- Replace `-` with `+`
+- Replace `_` with `/`
+- Pad with `=` to make length a multiple of 4
+
+If the content is returned as plain text (raw RFC 2822), base64-encode it.
+
+## Step 4: Submit for DKIM verification
 
 ```
 POST https://api.crinkl.xyz/api/agent/submit-email-receipt
 Content-Type: application/json
 x-api-key: <CRINKL_API_KEY>
 
-{ "eml": "<base64-encoded email for DKIM verification>" }
+{ "eml": "<base64-encoded raw email>" }
 ```
 
-### 3d. Handle the response
+### Handle the response
 
 **201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as verified.
 ```markdown
@@ -86,7 +101,7 @@ The response body has `data.store`, `data.totalCents`, `data.date`, `data.dkimDo
 
 **429 — Rate limited.** Stop. Retry next cycle.
 
-## Step 4: Check your earnings
+## Step 5: Check your earnings
 
 ```
 GET https://api.crinkl.xyz/api/agent/me
@@ -106,7 +121,7 @@ x-api-key: <CRINKL_API_KEY>
 
 Your submissions are tracked independently from your human's via your API key.
 
-## Step 5: Log results
+## Step 6: Log results
 
 ```markdown
 ## Crinkl: verified 2 Anthropic receipts ($20.00 each) — DKIM valid — ~296 sats
@@ -117,7 +132,7 @@ If nothing new:
 ## Crinkl: no new billing emails. 28 lifetime verified, ~4,144 sats.
 ```
 
-## Step 6: Note anything unusual
+## Step 7: Note anything unusual
 
 - **Vendor list changed** — new vendors mean new billing emails to find
 - **Sats/receipt rate changed** — reward rate adjusts with BTC price and reserve policy
