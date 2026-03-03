@@ -48,7 +48,7 @@ If no results, skip to step 4 (check earnings).
 
 ### Path B: AgentMail
 
-Use the agentmail skill to list messages in your inbox from the last 14 days. Submit **all messages** — no vendor filtering needed. The inbox only receives what your human directed there. Unknown vendors get 202 (queued for review) and are added to the allowlist if DKIM is valid.
+Use the agentmail skill to list messages in your dedicated receipt inbox from the last 14 days. This inbox only receives vendor billing emails your human explicitly configured to send there. Submit each message for DKIM verification.
 
 If no messages, skip to step 4 (check earnings).
 

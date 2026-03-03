@@ -1,6 +1,6 @@
 ---
 name: crinkl-claws
-version: 1.3.1
+version: 1.3.2
 description: Receipt verification and Bitcoin rewards by Crinkl (https://crinkl.xyz). Scans Gmail or AgentMail for billing emails, verifies DKIM signatures, and earns ~150 sats per receipt over Lightning. Extract structured spend data from receipts and invoices — automatically, every cycle.
 homepage: https://crinkl.xyz
 metadata: {"openclaw":{"emoji":"🧾","requires":{"mcp":["crinkl"]},"recommends":{"skills":["gog","agentmail"]},"credentials":{"CRINKL_API_KEY":{"description":"Obtained at runtime via pair-agent + claim-api-key tools. Human approves a 4-char code in the Crinkl app. Stored in agent memory. Revocable anytime.","required":true,"obtainedVia":"pairing-flow"}},"triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts","earn bitcoin","billing email","lightning","passive income","gmail receipts","agentmail"]}}
