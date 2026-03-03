@@ -2,9 +2,9 @@
 
 # crinkl-agent
 
-Scan Gmail for SaaS billing emails. Submit them to [Crinkl](https://crinkl.xyz). Get sats over Lightning.
+Scan email for SaaS billing receipts. Submit them to [Crinkl](https://crinkl.xyz). Get sats over Lightning.
 
-[Standalone CLI](#path-a-standalone-cli) · [OpenClaw Skill](#path-b-openclaw-skill) · [API](#api-reference) · [Privacy](#privacy)
+[Standalone CLI](#path-a-standalone-cli) · [OpenClaw Skill](#path-b-openclaw-skill) · [AgentMail](#path-c-agentmail) · [API](#api-reference) · [Privacy](#privacy)
 
 </div>
 
@@ -17,7 +17,7 @@ Scan Gmail for SaaS billing emails. Submit them to [Crinkl](https://crinkl.xyz).
 ## How it works
 
 ```
-Gmail (readonly) → crinkl-agent (your machine) → api.crinkl.xyz (DKIM verify + attest) → spend token → ₿ sats
+Email source (Gmail or AgentMail) → crinkl-agent (your machine) → api.crinkl.xyz (DKIM verify + attest) → spend token → ₿ sats
 ```
 
 1. **Fetch** allowed vendors from the Crinkl API
@@ -30,9 +30,9 @@ The server does all verification and data extraction. The agent is just a pipe f
 
 ---
 
-## Two ways to use this
+## Three ways to use this
 
-There are two independent paths. Pick the one that matches your setup.
+There are three independent paths. Pick the one that matches your setup.
 
 ### Path A: Standalone CLI
 
@@ -132,6 +132,39 @@ No copy-paste, no navigating settings. The agent handles Gmail scanning, DKIM su
 
 ---
 
+### Path C: AgentMail
+
+Use [AgentMail](https://agentmail.to) instead of Gmail. The agent gets its own inbox — no OAuth, no forwarding. Vendor billing emails are sent directly to the AgentMail address, preserving DKIM signatures intact.
+
+```bash
+# Set environment variables
+export CRINKL_API_KEY=crk_...
+export AGENTMAIL_API_KEY=am_...        # from console.agentmail.to
+export AGENTMAIL_INBOX_ID=inbox_...    # your AgentMail inbox ID
+
+npx crinkl-agent --agentmail
+```
+
+#### Setup
+
+1. Get an AgentMail API key from [console.agentmail.to](https://console.agentmail.to)
+2. Create an inbox via the AgentMail API or dashboard
+3. Update your vendor billing emails to send to `<inbox>@agentmail.to`
+4. Run `crinkl-agent --agentmail`
+
+**Why not forwarding?** Forwarding (e.g. Gmail auto-forward) rewrites the email with the forwarder's DKIM signature, not the vendor's. The vendor's DKIM breaks. Direct delivery preserves it.
+
+#### With OpenClaw
+
+```bash
+clawhub install agentmail       # AgentMail inbox management
+clawhub install crinkl-claws    # receipt scanning + submission
+```
+
+When pairing, pass `agentmailInbox` to `pair-agent` so your human sees the inbox address during approval. The Crinkl app shows: "This agent will monitor **crinkl-xyz@agentmail.to** for your vendor receipts."
+
+---
+
 ## Supported vendors
 
 The agent fetches the vendor allowlist from the API on each run, with a shipped fallback for offline use.
@@ -208,14 +241,15 @@ This agent runs on your machine. Here's what leaves it:
 
 ```
 src/
-├── index.ts       # CLI entry — Gmail scan loop, submit/dedup logic
+├── index.ts       # CLI entry — Gmail/AgentMail scan loop, submit/dedup logic
 ├── config.ts      # .env loader
 ├── gmail.ts       # Gmail OAuth + search + download
+├── agentmail.ts   # AgentMail inbox + message listing + raw .eml download
 ├── crinkl.ts      # Crinkl API client (verify, submit)
 └── vendors.ts     # Vendor allowlist (API-first, shipped fallback)
 ```
 
-~200 lines of core logic. The server does the hard part.
+~300 lines of core logic. The server does the hard part.
 
 ## License
 

@@ -1,6 +1,6 @@
 # Crinkl Heartbeat
 
-*Run each cycle. Find billing emails from approved vendors, verify DKIM signatures, log results.*
+*Run each cycle. Find billing emails, verify DKIM signatures, submit to earn sats.*
 
 ## Step 0: Check API key
 
@@ -10,7 +10,7 @@ If you don't have `CRINKL_API_KEY` stored in your memory, pair with your human's
 
 Generate a random 64-character hex string as your `deviceToken`. Store it — you'll need it to claim the key.
 
-1. Call `pair-agent` with your `deviceToken`.
+1. Call `pair-agent` with your `deviceToken`. If using AgentMail, also pass `agentmailInbox` (e.g. `crinkl-xyz@agentmail.to`) — the human will see this address when approving.
    - Returns `code` (4 characters) and `expiresAt`.
 
 2. Tell your human:
@@ -24,33 +24,17 @@ Generate a random 64-character hex string as your `deviceToken`. Store it — yo
 
 Once you have the key, store it and never run step 0 again.
 
-## Step 1: Fetch the vendor list
+## Step 1: Find billing emails
 
-Call `get-vendors`.
+Choose the path that matches your email provider.
 
-Extract the `domain` field from each vendor in the response. These are the only domains you will search for.
+### Path A: Gmail (via gog)
 
-Example response:
-```json
-{
-  "data": {
-    "vendors": [
-      { "domain": "amazon.com", "displayName": "Amazon" },
-      { "domain": "openai.com", "displayName": "OpenAI" },
-      { "domain": "stripe.com", "displayName": "Stripe" },
-      { "domain": "suno.com", "displayName": "Suno" }
-    ]
-  }
-}
-```
+First, fetch the vendor list: call `get-vendors`. Extract the `domain` field from each vendor. These are the only domains you will search for.
 
-### Domain validation
+Before using any vendor domain, validate that it matches a strict domain pattern: letters, digits, hyphens, and dots only (e.g. `amazon.com`, `openai.com`). Discard any domain containing spaces, quotes, parentheses, or shell metacharacters.
 
-Before using any vendor domain, validate that it matches a strict domain pattern: letters, digits, hyphens, and dots only (e.g. `amazon.com`, `openai.com`). Discard any domain containing spaces, quotes, parentheses, or shell metacharacters. This prevents malformed data from affecting downstream queries.
-
-## Step 2: Find billing emails
-
-Search your human's Gmail for receipts from approved vendors using the Gmail API (via the gog skill's search tool or equivalent).
+Search your human's Gmail for receipts from those vendors using the Gmail API (via the gog skill's search tool or equivalent).
 
 Build a Gmail search query string from the validated vendor domains:
 
@@ -60,21 +44,29 @@ from:(@amazon.com OR @openai.com OR @stripe.com OR @suno.com) subject:(receipt O
 
 Pass this query string to the Gmail search API. Request up to 50 results.
 
-If no results, skip to step 5 (check earnings).
+If no results, skip to step 4 (check earnings).
 
-## Step 3: Get the raw email
+### Path B: AgentMail
 
-For each message from step 2, you need the **raw RFC 2822 email** — this is required because DKIM signatures are computed over the original message content.
+Use the agentmail skill to list messages in your inbox from the last 14 days. Submit **all messages** — no vendor filtering needed. The inbox only receives what your human directed there. Unknown vendors get 202 (queued for review) and are added to the allowlist if DKIM is valid.
 
-### 3a. Skip already-verified emails
+If no messages, skip to step 4 (check earnings).
+
+## Step 2: Get the raw email
+
+For each message from step 1, you need the **raw RFC 2822 email** — DKIM signatures are computed over the original message bytes.
+
+### 2a. Skip already-submitted emails
 
 Track message IDs you've already submitted in your memory. Skip any ID you've seen before.
 
-### 3b. Download raw email
+### 2b. Download raw email
 
-Use the Gmail API to fetch the message by ID in raw format (RFC 2822).
+**Gmail**: Use the Gmail API to fetch the message by ID in raw format (RFC 2822).
 
-### 3c. Encode for submission
+**AgentMail**: Use the agentmail skill to get the raw message content for each email. The raw RFC 2822 bytes are required for DKIM verification.
+
+### 2c. Encode for submission
 
 The raw email must be submitted as **standard base64**. If the email content is returned as base64url (common in Gmail API responses), convert it:
 - Replace `-` with `+`
@@ -83,27 +75,27 @@ The raw email must be submitted as **standard base64**. If the email content is 
 
 If the content is returned as plain text (raw RFC 2822), base64-encode it.
 
-## Step 4: Submit for DKIM verification
+## Step 3: Submit for DKIM verification
 
 Call `submit-receipt` with your `apiKey` and the base64-encoded `eml`.
 
 ### Handle the response
 
-**Status 201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as verified.
+**Status 201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as submitted.
 ```markdown
 ## Crinkl: verified [store] receipt — $[totalCents/100] — DKIM valid — ~[satsPerReceipt] sats
 ```
 The response has `data.store`, `data.totalCents`, `data.date`, `data.dkimDomain`.
 
-**Status 202 — Vendor queued.** Domain not on allowlist yet. Do NOT mark as verified — retry next cycle.
+**Status 202 — Vendor queued.** Domain not on allowlist yet. Do NOT mark as submitted — retry next cycle. The vendor will be approved if DKIM is valid.
 
-**Status 409 — Duplicate.** Already verified. Mark as verified. Skip.
+**Status 409 — Duplicate.** Already submitted. Mark as submitted. Skip.
 
-**Status 422 — Validation failed.** DKIM signature invalid, email too old, or no invoice amount found. Mark as verified.
+**Status 422 — Validation failed.** DKIM signature invalid, email too old, or no invoice amount found. Mark as submitted (don't retry).
 
 **Status 429 — Rate limited.** Stop. Retry next cycle.
 
-## Step 5: Check your earnings
+## Step 4: Check your earnings
 
 Call `get-agent-me` with your `apiKey`.
 
@@ -120,7 +112,7 @@ Call `get-agent-me` with your `apiKey`.
 
 Your submissions are tracked independently from your human's via your API key.
 
-## Step 6: Log results
+## Step 5: Log results
 
 ```markdown
 ## Crinkl: verified 2 Amazon receipts ($20.00 each) — DKIM valid — ~296 sats
@@ -131,7 +123,7 @@ If nothing new:
 ## Crinkl: no new billing emails. 28 lifetime verified, ~4,144 sats.
 ```
 
-## Step 7: Note anything unusual
+## Step 6: Note anything unusual
 
 - **Vendor list changed** — new vendors mean new billing emails to find
 - **Sats/receipt rate changed** — reward rate adjusts with BTC price and reserve policy

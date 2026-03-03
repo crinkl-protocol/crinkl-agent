@@ -33,7 +33,7 @@ function loadDotEnv(): void {
   }
 }
 
-export function loadConfig(): Config {
+export function loadConfig(opts?: { agentmail?: boolean }): Config {
   loadDotEnv();
 
   const crinklApiKey = process.env.CRINKL_API_KEY;
@@ -44,14 +44,22 @@ export function loadConfig(): Config {
     process.exit(1);
   }
 
-  const gmailClientId = process.env.GMAIL_CLIENT_ID;
-  const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET;
-  if (!gmailClientId || !gmailClientSecret) {
-    console.error("GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are required.");
-    console.error(
-      "Create an OAuth app at https://console.cloud.google.com/apis/credentials"
-    );
-    process.exit(1);
+  // Gmail credentials are only required when NOT using AgentMail
+  let gmailClientId = "";
+  let gmailClientSecret = "";
+  if (!opts?.agentmail) {
+    gmailClientId = process.env.GMAIL_CLIENT_ID || "";
+    gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || "";
+    if (!gmailClientId || !gmailClientSecret) {
+      console.error("GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are required.");
+      console.error(
+        "Create an OAuth app at https://console.cloud.google.com/apis/credentials"
+      );
+      console.error(
+        "Or use --agentmail to skip Gmail and use an AgentMail inbox instead."
+      );
+      process.exit(1);
+    }
   }
 
   return {

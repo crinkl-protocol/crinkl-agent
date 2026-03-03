@@ -1,9 +1,9 @@
 ---
 name: crinkl-claws
-version: 1.2.2
-description: Receipt verification and Bitcoin rewards by Crinkl (https://crinkl.xyz). Scans Gmail for billing emails, verifies DKIM signatures, and earns ~150 sats per receipt over Lightning. Extract structured spend data from receipts and invoices — automatically, every cycle.
+version: 1.3.1
+description: Receipt verification and Bitcoin rewards by Crinkl (https://crinkl.xyz). Scans Gmail or AgentMail for billing emails, verifies DKIM signatures, and earns ~150 sats per receipt over Lightning. Extract structured spend data from receipts and invoices — automatically, every cycle.
 homepage: https://crinkl.xyz
-metadata: {"openclaw":{"emoji":"🧾","requires":{"mcp":["crinkl"]},"recommends":{"skills":["gog"]},"credentials":{"CRINKL_API_KEY":{"description":"Obtained at runtime via pair-agent + claim-api-key tools. Human approves a 4-char code in the Crinkl app. Stored in agent memory. Revocable anytime.","required":true,"obtainedVia":"pairing-flow"}},"triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts","earn bitcoin","billing email","lightning","passive income","gmail receipts"]}}
+metadata: {"openclaw":{"emoji":"🧾","requires":{"mcp":["crinkl"]},"recommends":{"skills":["gog","agentmail"]},"credentials":{"CRINKL_API_KEY":{"description":"Obtained at runtime via pair-agent + claim-api-key tools. Human approves a 4-char code in the Crinkl app. Stored in agent memory. Revocable anytime.","required":true,"obtainedVia":"pairing-flow"}},"triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts","earn bitcoin","billing email","lightning","passive income","gmail receipts","agentmail"]}}
 ---
 
 # Crinkl — Earn Bitcoin from Billing Emails
@@ -12,7 +12,9 @@ metadata: {"openclaw":{"emoji":"🧾","requires":{"mcp":["crinkl"]},"recommends"
 clawhub install crinkl-claws
 ```
 
-Scan your human's Gmail for billing emails, verify their cryptographic DKIM signatures, and earn ~150 sats per receipt over Lightning. Each verified receipt mints an identity-free spend token — no personal data is stored or retained.
+Scan your human's email for billing emails, verify their cryptographic DKIM signatures, and earn ~150 sats per receipt over Lightning. Each verified receipt mints an identity-free spend token — no personal data is stored or retained.
+
+Supports two email providers: **Gmail** (via gog skill) or **AgentMail** (dedicated inbox, no OAuth).
 
 ## MCP Server
 
@@ -55,12 +57,14 @@ This is the same verification that Gmail, Outlook, and every email provider perf
 
 ### Scope
 
-This skill only searches for billing emails from approved vendor domains (call `get-vendors`), filtered by billing keywords, from the last 14 days.
+- **Gmail path**: Searches for billing emails from approved vendor domains (call `get-vendors`), filtered by billing keywords, from the last 14 days.
+- **AgentMail path**: Processes messages in the dedicated receipt inbox. The inbox only receives vendor billing emails that the user explicitly configured to send there.
 
 ## Security Model
 
 - **Human-authorized**: Your human approves the pairing code in their app. Nothing runs without their explicit consent.
-- **Vendor-scoped**: Only billing emails from approved vendors are processed — not arbitrary emails.
+- **Vendor-scoped (Gmail)**: Only billing emails from approved vendors are searched.
+- **Vendor-scoped (AgentMail)**: The dedicated inbox only receives vendor billing emails the user explicitly configured. No access to the user's primary email.
 - **Read-only Gmail**: The `gmail.readonly` scope means no email modification, deletion, or sending.
 - **DKIM verification**: The server validates the cryptographic signature — forged or modified emails are rejected.
 - **Identity-free output**: Spend tokens strip all personal data. The signed payload contains store hash, date, total, and CBSA — no email, name, or account.
@@ -80,7 +84,9 @@ On first run, pair with your human's wallet using the `pair-agent` tool:
 
 The code expires in 10 minutes.
 
-### 2. Gmail access
+### 2. Email access (choose one)
+
+**Option A: Gmail (via gog)**
 
 Install the **gog** skill for Gmail access:
 
@@ -90,17 +96,30 @@ clawhub install gog
 
 Your human authorizes read-only Gmail access through gog's OAuth setup.
 
+**Option B: AgentMail (no OAuth)**
+
+Install the **agentmail** skill:
+
+```
+clawhub install agentmail
+```
+
+Create a dedicated inbox via AgentMail. Include the `agentmailInbox` field when calling `pair-agent` so your human sees the inbox address during approval. Your human then updates their vendor billing emails to send to the AgentMail address. Receipts arrive directly with DKIM signatures intact — no forwarding.
+
+**Important**: Email forwarding (e.g. Gmail → AgentMail) breaks the vendor's DKIM signature. Vendors must send directly to the AgentMail address.
+
 ## How It Works
 
 Each cycle (see [HEARTBEAT.md](HEARTBEAT.md)):
 
 1. **Check API key** — call `pair-agent` + `claim-api-key` if needed (one-time)
-2. **Fetch the vendor list** — call `get-vendors` for approved vendor domains
-3. **Find billing emails** — Search Gmail via gog for receipts from approved vendors only
-4. **Get raw email** — Download each billing email in raw format (required for DKIM signature verification)
-5. **Submit for verification** — call `submit-receipt` with the base64 email; email is discarded after extraction
-6. **Log results** — Record what verified and what you earned
-7. **Check your earnings** — call `get-agent-me` for your submission count and sats earned
+2. **Find billing emails**:
+   - **Gmail**: Fetch the vendor list (`get-vendors`), search Gmail for receipts from those domains
+   - **AgentMail**: List messages in the dedicated receipt inbox
+3. **Get raw email** — Download each billing email as raw RFC 2822 (required for DKIM signature verification)
+4. **Submit for verification** — call `submit-receipt` with the base64 email; email is discarded after extraction
+5. **Log results** — Record what verified and what you earned
+6. **Check your earnings** — call `get-agent-me` for your submission count and sats earned
 
 ## MCP Tool Reference
 
@@ -108,7 +127,7 @@ All tools are available via the crinkl MCP server at `https://mcp.crinkl.xyz/mcp
 
 ### Pairing (no auth)
 
-- **`pair-agent`** — Start pairing. Pass `deviceToken` (64-char hex). Returns `code` and `expiresAt`.
+- **`pair-agent`** — Start pairing. Pass `deviceToken` (64-char hex) and optionally `agentmailInbox` (e.g. `crinkl-xyz@agentmail.to`). Returns `code` and `expiresAt`.
 - **`claim-api-key`** — Poll for API key. Pass `deviceToken` + `code`. Returns 202 (pending), 200 (approved with `apiKey`), or 410 (expired).
 
 ### Vendor discovery (no auth)

@@ -51,9 +51,10 @@ Unknown vendors are **queued, not rejected**. If a user submits an email from a 
 
 ```bash
 # 1. Start pairing — generate a device token (64-char hex), get a 4-char code
+#    Optional: include agentmailInbox to bind an AgentMail inbox to the wallet
 curl -X POST https://api.crinkl.xyz/api/agent/pair \
   -H "Content-Type: application/json" \
-  -d '{"deviceToken": "<64-char hex>"}'
+  -d '{"deviceToken": "<64-char hex>", "agentmailInbox": "crinkl-xyz@agentmail.to"}'
 # → { "code": "7X3K", "expiresAt": "..." }
 
 # 2. Tell user: "Open Crinkl app, enter code 7X3K"
@@ -99,29 +100,37 @@ The public MCP server provides read-only tools for querying verified commerce da
 ### Prerequisites
 
 1. **Crinkl API key** — user signs up at [app.crinkl.xyz](https://app.crinkl.xyz) (it's a PWA — works in any browser). Once they have a wallet: Profile → Crinkl Agent Keys → Create key. The `crk_...` key is shown once.
-2. **Google OAuth credentials** — [Create OAuth Client ID](https://console.cloud.google.com/apis/credentials) (Desktop app) + [Enable Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com)
-3. `.env` from `.env.example` with both credentials
+2. **Email provider** (choose one):
+   - **Gmail**: [Create OAuth Client ID](https://console.cloud.google.com/apis/credentials) (Desktop app) + [Enable Gmail API](https://console.cloud.google.com/apis/library/gmail.googleapis.com)
+   - **AgentMail**: Get API key from [console.agentmail.to](https://console.agentmail.to), create an inbox, set `AGENTMAIL_API_KEY` + `AGENTMAIL_INBOX_ID`
+3. `.env` from `.env.example` with credentials
 
 ### Run
 
 ```bash
 npm install
+
+# Gmail path:
 npm run auth     # one-time Gmail OAuth
 npm run dev      # scan + submit
+
+# AgentMail path:
+npm run dev -- --agentmail   # scan AgentMail inbox + submit
 ```
 
 ### Commands
 
 ```
-npm run dev              # scan Gmail + submit receipts
-npm run dev -- --scan    # dry run (preview only)
-npm run dev -- --auth    # set up Gmail auth only
+npm run dev                    # scan Gmail + submit receipts
+npm run dev -- --agentmail     # scan AgentMail inbox + submit
+npm run dev -- --scan          # dry run (preview only)
+npm run dev -- --auth          # set up Gmail auth only
 ```
 
 ### Data flow
 
 ```
-Gmail (readonly) → crinkl-agent (local) → api.crinkl.xyz (DKIM verify + attest) → spend token → ₿ sats
+Email source (Gmail or AgentMail) → crinkl-agent (local) → api.crinkl.xyz (DKIM verify + attest) → spend token → ₿ sats
 ```
 
 Only individual `.eml` files leave the user's machine. No inbox access, credentials, or OAuth tokens are shared.
@@ -132,9 +141,10 @@ Only individual `.eml` files leave the user's machine. No inbox access, credenti
 
 ```
 src/
-├── index.ts       # CLI entry — Gmail scan loop, submit/dedup logic
+├── index.ts       # CLI entry — Gmail/AgentMail scan loop, submit/dedup logic
 ├── config.ts      # .env loader, Config type
 ├── gmail.ts       # Gmail OAuth + search + download
+├── agentmail.ts   # AgentMail inbox + message listing + raw .eml download
 ├── crinkl.ts      # Crinkl API client (verify, submit)
 └── vendors.ts     # Vendor allowlist (API-first, shipped fallback)
 ```
@@ -147,8 +157,10 @@ Currently Gmail only. To add Outlook, Yahoo, etc:
    - `connect(config)` — authenticate
    - `searchReceipts(client, vendors, maxAgeDays)` — find billing emails
    - `downloadEml(client, messageId)` — get raw `.eml` content
-2. Add `--provider <name>` flag in `src/index.ts`
+2. Add `--<provider>` flag in `src/index.ts` (see `--agentmail` for reference)
 3. Include auth setup instructions in README
+
+See `src/agentmail.ts` for a working example of a non-Gmail email provider.
 
 ### Code conventions
 
