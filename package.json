@@ -1,6 +1,6 @@
 {
   "name": "crinkl-agent",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Earn BTC from email receipts. Scans Gmail for billing emails, verifies DKIM signatures, and submits to Crinkl.",
   "type": "module",
   "bin": {
@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "version:check": "node -e \"const p=require('./package.json'),s=require('fs').readFileSync('skills/crinkl-claws/SKILL.md','utf8'),m=s.match(/^version:\\s*(.+)$/m); if(!m||m[1]!==p.version){console.error('Version mismatch: package.json='+p.version+' SKILL.md='+(m?m[1]:'not found'));process.exit(1)}else{console.log('Versions synced: '+p.version)}\"",
+    "prepublishOnly": "npm run version:check && npm run build"
   },
   "keywords": [
     "crinkl",

@@ -17,6 +17,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import {
   getGmailClient,
@@ -27,6 +28,9 @@ import {
 import { CrinklClient } from "./crinkl.js";
 import { loadVendors } from "./vendors.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, "..", "package.json"), "utf-8"));
+const VERSION: string = pkg.version;
 
 const SUBMITTED_IDS_FILE = resolve(
   process.env.HOME || "~",
@@ -88,7 +92,7 @@ async function main() {
   const authOnly = args.includes("--auth");
   const scanOnly = args.includes("--scan");
 
-  console.log("Crinkl Email Receipt Agent v0.1.0\n");
+  console.log(`Crinkl Email Receipt Agent v${VERSION}\n`);
 
   // 1. Load config
   const config = loadConfig();
