@@ -4,46 +4,31 @@
 
 ## Step 0: Check API key
 
-If you don't have `CRINKL_API_KEY` stored in your environment or memory, pair with your human's wallet first.
+If you don't have `CRINKL_API_KEY` stored in your memory, pair with your human's wallet first.
 
 ### Pairing flow (one-time)
 
 Generate a random 64-character hex string as your `deviceToken`. Store it — you'll need it to claim the key.
 
-```
-POST https://api.crinkl.xyz/api/agent/pair
-Content-Type: application/json
+1. Call `pair-agent` with your `deviceToken`.
+   - Returns `code` (4 characters) and `expiresAt`.
 
-{ "deviceToken": "<your 64-char hex>" }
-→ { "code": "7X3K", "expiresAt": "2026-03-01T12:10:00Z" }
-```
+2. Tell your human:
 
-Tell your human:
+> Open the Crinkl app and enter code: **[code]**
 
-> Open the Crinkl app and enter code: **7X3K**
-
-Then poll every 5 seconds:
-
-```
-POST https://api.crinkl.xyz/api/agent/pair/claim
-Content-Type: application/json
-
-{ "deviceToken": "<same token>", "code": "7X3K" }
-```
-
-- **202** — human hasn't approved yet. Keep polling.
-- **200** — `{ "apiKey": "crk_..." }` — store this. It's your `CRINKL_API_KEY`. Shown once.
-- **410** — code expired (10 min). Start over.
+3. Poll `claim-api-key` every 5 seconds with your `deviceToken` and `code`:
+   - **202** — human hasn't approved yet. Keep polling.
+   - **200** — contains `apiKey` (starts with `crk_`). Store this as your `CRINKL_API_KEY`. Shown once.
+   - **410** — code expired (10 min). Start over.
 
 Once you have the key, store it and never run step 0 again.
 
 ## Step 1: Fetch the vendor list
 
-```
-GET https://api.crinkl.xyz/api/agent/allowed-vendors
-```
+Call `get-vendors`.
 
-Extract the `domain` field from each vendor in `data.vendors`. These are the only domains you will search for.
+Extract the `domain` field from each vendor in the response. These are the only domains you will search for.
 
 Example response:
 ```json
@@ -96,36 +81,27 @@ If the content is returned as plain text (raw RFC 2822), base64-encode it.
 
 ## Step 4: Submit for DKIM verification
 
-```
-POST https://api.crinkl.xyz/api/agent/submit-email-receipt
-Content-Type: application/json
-x-api-key: <CRINKL_API_KEY>
-
-{ "eml": "<base64-encoded raw email>" }
-```
+Call `submit-receipt` with your `apiKey` and the base64-encoded `eml`.
 
 ### Handle the response
 
-**201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as verified.
+**Status 201 — DKIM verified.** Spend token minted, sats queued. Mark message ID as verified.
 ```markdown
 ## Crinkl: verified [store] receipt — $[totalCents/100] — DKIM valid — ~[satsPerReceipt] sats
 ```
-The response body has `data.store`, `data.totalCents`, `data.date`, `data.dkimDomain`.
+The response has `data.store`, `data.totalCents`, `data.date`, `data.dkimDomain`.
 
-**202 — Vendor queued.** Domain not on allowlist yet. Do NOT mark as verified — retry next cycle.
+**Status 202 — Vendor queued.** Domain not on allowlist yet. Do NOT mark as verified — retry next cycle.
 
-**409 — Duplicate.** Already verified. Mark as verified. Skip.
+**Status 409 — Duplicate.** Already verified. Mark as verified. Skip.
 
-**422 — Validation failed.** DKIM signature invalid, email too old, or no invoice amount found. Mark as verified.
+**Status 422 — Validation failed.** DKIM signature invalid, email too old, or no invoice amount found. Mark as verified.
 
-**429 — Rate limited.** Stop. Retry next cycle.
+**Status 429 — Rate limited.** Stop. Retry next cycle.
 
 ## Step 5: Check your earnings
 
-```
-GET https://api.crinkl.xyz/api/agent/me
-x-api-key: <CRINKL_API_KEY>
-```
+Call `get-agent-me` with your `apiKey`.
 
 **Your numbers (per API key):**
 - `mySubmissions` — receipts you verified via this API key
@@ -143,7 +119,7 @@ Your submissions are tracked independently from your human's via your API key.
 ## Step 6: Log results
 
 ```markdown
-## Crinkl: verified 2 Anthropic receipts ($20.00 each) — DKIM valid — ~296 sats
+## Crinkl: verified 2 Amazon receipts ($20.00 each) — DKIM valid — ~296 sats
 ```
 
 If nothing new:
