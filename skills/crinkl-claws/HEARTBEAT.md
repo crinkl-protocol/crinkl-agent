@@ -50,10 +50,10 @@ Example response:
 {
   "data": {
     "vendors": [
-      { "domain": "anthropic.com", "displayName": "Anthropic" },
       { "domain": "amazon.com", "displayName": "Amazon" },
-      { "domain": "cursor.com", "displayName": "Cursor" },
-      { "domain": "stripe.com", "displayName": "Stripe" }
+      { "domain": "openai.com", "displayName": "OpenAI" },
+      { "domain": "stripe.com", "displayName": "Stripe" },
+      { "domain": "suno.com", "displayName": "Suno" }
     ]
   }
 }
@@ -64,7 +64,7 @@ Example response:
 Search your human's Gmail for receipts from approved vendors. Build the query from the vendor domains in step 1.
 
 ```
-gog gmail search "from:(@anthropic.com OR @amazon.com OR @cursor.com OR @stripe.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d" --max 50 --json
+gog gmail search "from:(@amazon.com OR @openai.com OR @stripe.com OR @suno.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d" --max 50 --json
 ```
 
 Build the `from:` clause dynamically from the vendor domains fetched in step 1.

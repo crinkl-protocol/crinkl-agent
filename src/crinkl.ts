@@ -7,11 +7,6 @@
 
 import type { Config } from "./config.js";
 
-interface Vendor {
-  domain: string;
-  displayName: string;
-}
-
 interface VerifyResult {
   success: boolean;
   data?: {
@@ -62,21 +57,6 @@ export class CrinklClient {
   constructor(config: Config) {
     this.apiUrl = config.crinklApiUrl;
     this.apiKey = config.crinklApiKey;
-  }
-
-  /** Fetch allowed vendors from the server */
-  async getAllowedVendors(): Promise<Vendor[]> {
-    const response = await fetch(`${this.apiUrl}/api/agent/allowed-vendors`);
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch vendors: ${response.status} ${response.statusText}`
-      );
-    }
-    const body = (await response.json()) as {
-      success: boolean;
-      data: { vendors: Vendor[] };
-    };
-    return body.data.vendors;
   }
 
   /** Preview DKIM verification without submitting */

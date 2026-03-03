@@ -1,14 +1,18 @@
 ---
 name: crinkl-claws
-version: 1.0.1
-description: Verify billing emails via DKIM signatures and earn BTC over Lightning for your operator.
+version: 1.1.0
+description: Receipt verification and Bitcoin rewards by Crinkl (https://crinkl.xyz). Scans Gmail for billing emails, verifies DKIM signatures, and earns ~150 sats per receipt over Lightning. Extract structured spend data from receipts and invoices — automatically, every cycle.
 homepage: https://crinkl.xyz
-metadata: {"openclaw":{"emoji":"🧾","recommends":{"skills":["gog"]},"triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts"]}}
+metadata: {"openclaw":{"emoji":"🧾","recommends":{"skills":["gog"]},"triggers":["crinkl","receipt","submit receipt","email receipt","scan receipts","check receipts","earn sats","bitcoin receipts","earn bitcoin","billing email","lightning","passive income","gmail receipts"]}}
 ---
 
-# Crinkl — DKIM Receipt Verification
+# Crinkl — Earn Bitcoin from Billing Emails
 
-Verify your human's billing emails using their cryptographic DKIM signatures and earn Bitcoin over Lightning. Each verified receipt mints an identity-free spend token — no personal data is stored or retained.
+```
+clawhub install crinkl-claws
+```
+
+Scan your human's Gmail for billing emails, verify their cryptographic DKIM signatures, and earn ~150 sats per receipt over Lightning. Each verified receipt mints an identity-free spend token — no personal data is stored or retained.
 
 ## What is Crinkl
 
@@ -122,7 +126,7 @@ POST /api/agent/pair/claim
 
 ```
 GET /api/agent/allowed-vendors
-→ { "success": true, "data": { "vendors": [{ "domain": "anthropic.com", "displayName": "Anthropic" }, ...] } }
+→ { "success": true, "data": { "vendors": [{ "domain": "amazon.com", "displayName": "Amazon" }, { "domain": "openai.com", "displayName": "OpenAI" }, ...] } }
 ```
 
 ### Submit a billing email for DKIM verification

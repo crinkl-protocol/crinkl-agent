@@ -135,7 +135,8 @@ src/
 ├── index.ts       # CLI entry — Gmail scan loop, submit/dedup logic
 ├── config.ts      # .env loader, Config type
 ├── gmail.ts       # Gmail OAuth + search + download
-└── crinkl.ts      # Crinkl API client (verify, submit, vendors)
+├── crinkl.ts      # Crinkl API client (verify, submit)
+└── vendors.ts     # Vendor allowlist (API-first, shipped fallback)
 ```
 
 ### Adding a new email provider

@@ -104,8 +104,8 @@ async function main() {
     return;
   }
 
-  // 3. Load vendor allowlist (shipped with the package)
-  const vendors = loadVendors();
+  // 3. Load vendor allowlist (API-first, shipped fallback)
+  const vendors = await loadVendors(config.crinklApiUrl);
   console.log(
     `Scanning for ${vendors.length} vendors: ${vendors.map((v) => v.name).join(", ")}\n`
   );
