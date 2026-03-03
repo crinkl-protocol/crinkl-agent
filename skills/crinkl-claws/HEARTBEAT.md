@@ -44,15 +44,21 @@ Example response:
 }
 ```
 
+### Domain validation
+
+Before using any vendor domain, validate that it matches a strict domain pattern: letters, digits, hyphens, and dots only (e.g. `amazon.com`, `openai.com`). Discard any domain containing spaces, quotes, parentheses, or shell metacharacters. This prevents malformed data from affecting downstream queries.
+
 ## Step 2: Find billing emails
 
-Search your human's Gmail for receipts from approved vendors. Build the query from the vendor domains in step 1.
+Search your human's Gmail for receipts from approved vendors using the Gmail API (via the gog skill's search tool or equivalent).
+
+Build a Gmail search query string from the validated vendor domains:
 
 ```
-gog gmail search "from:(@amazon.com OR @openai.com OR @stripe.com OR @suno.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d" --max 50 --json
+from:(@amazon.com OR @openai.com OR @stripe.com OR @suno.com) subject:(receipt OR invoice OR order OR payment OR confirmation OR billing) newer_than:14d
 ```
 
-Build the `from:` clause dynamically from the vendor domains fetched in step 1.
+Pass this query string to the Gmail search API. Request up to 50 results.
 
 If no results, skip to step 5 (check earnings).
 
@@ -66,9 +72,7 @@ Track message IDs you've already submitted in your memory. Skip any ID you've se
 
 ### 3b. Download raw email
 
-```
-gog gmail get <messageId> --format raw
-```
+Use the Gmail API to fetch the message by ID in raw format (RFC 2822).
 
 ### 3c. Encode for submission
 
