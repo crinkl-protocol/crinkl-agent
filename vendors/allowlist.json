@@ -31,12 +31,12 @@
       "domain": "openai.com",
       "name": "OpenAI",
       "category": "saas"
+    },
+    {
+      "domain": "anthropic.com",
+      "name": "Anthropic",
+      "category": "saas"
     }
   ],
-  "unsupported": [
-    {
-      "name": "Anthropic",
-      "reason": "No emailed receipts. Invoices behind dashboard download only."
-    }
-  ]
+  "unsupported": []
 }

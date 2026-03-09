@@ -31,7 +31,42 @@ import {
   getMessageSubject,
 } from "./gmail.js";
 import { CrinklClient } from "./crinkl.js";
-import { loadVendors } from "./vendors.js";
+import { loadVendors, type Vendor } from "./vendors.js";
+
+/**
+ * Per-vendor subject filters. Only emails whose subject matches at least one
+ * pattern are considered receipts. Vendors without an entry here accept all
+ * subjects (original behavior).
+ */
+const SUBJECT_FILTERS: Record<string, RegExp[]> = {
+  "amazon.com": [/\bshipped\b/i],
+  "anthropic.com": [/\breceipt\b/i, /\binvoice\b/i],
+  "openai.com": [/\breceipt\b/i, /\binvoice\b/i, /\bpayment\b/i],
+  "email.openai.com": [/\breceipt\b/i, /\binvoice\b/i, /\bpayment\b/i],
+  "stripe.com": [/\breceipt\b/i, /\binvoice\b/i, /\bpayment\b/i],
+};
+
+/** Check if an email subject is a likely receipt for the given vendor domain. */
+function isReceiptSubject(subject: string, vendorDomain: string): boolean {
+  const filters = SUBJECT_FILTERS[vendorDomain];
+  if (!filters) return true; // no filter = accept all
+  return filters.some((re) => re.test(subject));
+}
+
+/** Find the vendor domain from a "from" address in the subject line. */
+function matchVendorDomain(
+  subjectLine: string,
+  vendors: Vendor[]
+): string | null {
+  for (const v of vendors) {
+    // Match @domain.com, @mail.domain.com, @email.domain.com, @subdomain.domain.com
+    const baseDomain = v.domain.replace(/^(mail|email)\./i, "");
+    if (new RegExp(`@([\\w.-]+\\.)?${baseDomain.replace(".", "\\.")}\\b`, "i").test(subjectLine)) {
+      return v.domain;
+    }
+  }
+  return null;
+}
 import {
   listMessages,
   downloadRawEml as agentmailDownloadRawEml,
@@ -315,6 +350,15 @@ async function runGmailPath(
 
     const subject = await getMessageSubject(gmail, email.messageId);
     console.log(`\n--- Processing: ${subject}`);
+
+    // Subject-based filter: skip non-receipt emails (cancellations, newsletters, etc.)
+    const vendorDomain = matchVendorDomain(subject, vendors);
+    if (vendorDomain && !isReceiptSubject(subject, vendorDomain)) {
+      console.log(`  SKIP: not a receipt email for ${vendorDomain}`);
+      submittedIds.add(email.messageId);
+      skipped++;
+      continue;
+    }
 
     try {
       // Download raw .eml (in memory only)
