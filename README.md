@@ -2,7 +2,7 @@
 
 # crinkl-agent
 
-Scan email for SaaS billing receipts. Submit them to [Crinkl](https://crinkl.xyz). Get sats over Lightning.
+Scan email for billing receipts from supported vendors. Submit them to [Crinkl](https://crinkl.xyz). Get sats over Lightning.
 
 [Standalone CLI](#path-a-standalone-cli) · [OpenClaw Skill](#path-b-openclaw-skill) · [AgentMail](#path-c-agentmail) · [API](#api-reference) · [Privacy](#privacy)
 
@@ -173,7 +173,7 @@ The agent fetches the vendor allowlist from the API on each run, with a shipped 
 curl https://api.crinkl.xyz/api/agent/allowed-vendors
 ```
 
-Vendors must send DKIM-signed billing emails. Web-only invoices (download from dashboard) have no DKIM signature and can't be verified.
+The list includes software and AI services, Amazon, and payment processors such as Stripe and Paddle, which send receipts on behalf of many merchants. Vendors must send DKIM-signed billing emails. Web-only invoices (download from dashboard) have no DKIM signature and can't be verified.
 
 If you submit an email from an unknown vendor, it's **queued for review** (not rejected). Once approved, the vendor is added to the allowlist and your spend is created retroactively.
 
