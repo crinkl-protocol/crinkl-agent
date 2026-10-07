@@ -1,3 +1,6 @@
+import type { EmailSource } from "./pipeline.js";
+import { senderDomain as parseSenderDomain } from "./filters.js";
+
 /**
  * AgentMail email provider — alternative to Gmail/gog.
  *
@@ -28,7 +31,7 @@ export interface AgentMailAddress {
 export interface AgentMailMessage {
   messageId: string;
   inboxId: string;
-  from: AgentMailAddress[];
+  from: AgentMailAddress[] | string;
   subject: string;
   timestamp: string;
 }
@@ -77,38 +80,46 @@ export async function createInbox(
 export async function listMessages(
   config: AgentMailConfig,
   inboxId: string,
-  opts?: { limit?: number; after?: string }
+  opts?: { limit?: number; after?: string; allPages?: boolean }
 ): Promise<AgentMailMessage[]> {
   const params = new URLSearchParams();
   if (opts?.limit) params.set("limit", String(opts.limit));
   if (opts?.after) params.set("after", opts.after);
 
-  const url = `${AGENTMAIL_API_BASE}/inboxes/${encodeURIComponent(inboxId)}/messages?${params}`;
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${config.apiKey}` },
-  });
+  const messages: AgentMailMessage[] = [];
+  let pageToken: string | undefined;
+  do {
+    if (pageToken) params.set("page_token", pageToken);
+    const url = `${AGENTMAIL_API_BASE}/inboxes/${encodeURIComponent(inboxId)}/messages?${params}`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+    });
 
-  if (!response.ok) {
-    throw new Error(`AgentMail list messages failed (${response.status})`);
-  }
+    if (!response.ok) {
+      throw new Error(`AgentMail list messages failed (${response.status})`);
+    }
 
-  const data = (await response.json()) as {
-    messages: Array<{
-      message_id: string;
-      inbox_id: string;
-      from: Array<{ email: string; name?: string }>;
-      subject: string;
-      timestamp: string;
-    }>;
-  };
+    const data = (await response.json()) as {
+      next_page_token?: string;
+      messages: Array<{
+        message_id: string;
+        inbox_id: string;
+        from: AgentMailAddress[] | string;
+        subject: string;
+        timestamp: string;
+      }>;
+    };
 
-  return data.messages.map((m) => ({
-    messageId: m.message_id,
-    inboxId: m.inbox_id,
-    from: m.from || [],
-    subject: m.subject,
-    timestamp: m.timestamp,
-  }));
+    messages.push(...data.messages.map((m) => ({
+      messageId: m.message_id,
+      inboxId: m.inbox_id,
+      from: m.from || [],
+      subject: m.subject,
+      timestamp: m.timestamp,
+    })));
+    pageToken = data.next_page_token;
+  } while (opts?.allPages && pageToken);
+  return messages;
 }
 
 /** Download raw .eml content for a message (required for DKIM verification) */
@@ -129,15 +140,34 @@ export async function downloadRawEml(
   return response.text();
 }
 
-/** Extract the sender email from the AgentMail from field (array of {email, name}) */
-export function senderEmail(from: AgentMailAddress[]): string | null {
+/** Accept the current From string and the legacy array of {email, name}. */
+export function senderEmail(from: AgentMailAddress[] | string): string | null {
+  if (typeof from === "string") return from || null;
   return from.length > 0 ? from[0].email : null;
 }
 
 /** Extract domain from a sender email address */
-export function senderDomain(from: AgentMailAddress[]): string | null {
-  const email = senderEmail(from);
-  if (!email) return null;
-  const at = email.lastIndexOf("@");
-  return at > 0 ? email.slice(at + 1).toLowerCase() : null;
+export function senderDomain(from: AgentMailAddress[] | string): string | null {
+  return parseSenderDomain(senderEmail(from) || "");
+}
+
+/** Adapt inbox metadata and raw downloads to the shared pipeline. */
+export function agentmailSource(
+  config: AgentMailConfig, inboxId: string, maxAgeDays: number, discover = false
+): EmailSource {
+  const after = new Date(Date.now() - maxAgeDays * 86_400_000).toISOString();
+  const metadata = new Map<string, AgentMailMessage>();
+  return {
+    async listMessages() {
+      const messages = await listMessages(config, inboxId, { limit: 50, after, allPages: discover });
+      for (const message of messages) metadata.set(message.messageId, message);
+      return messages.map(({ messageId }) => ({ messageId }));
+    },
+    async getMetadata(id) {
+      const message = metadata.get(id);
+      if (!message) throw new Error("AgentMail message metadata unavailable");
+      return { subject: message.subject || "", from: senderEmail(message.from) || "" };
+    },
+    downloadRawEml: (id) => downloadRawEml(config, inboxId, id),
+  };
 }

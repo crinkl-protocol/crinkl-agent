@@ -6,9 +6,19 @@ Two ways to contribute: **add a vendor** or **add an email provider**.
 
 ## Add a vendor
 
-The simplest way: just submit a billing email from the vendor. If the domain has valid DKIM, it enters a review queue and gets approved.
+Submit the unknown vendor's DKIM-signed billing email through the Crinkl API
+(`POST /api/agent/submit-email-receipt`). It enters the server review queue;
+Crinkl reviews and approves the vendor. Approval adds the domain to the
+allowlist and processes the queued spend retroactively. Submitting an email
+does not guarantee approval. AgentMail scans can submit unknown senders;
+Gmail submission scans currently search only allowed vendors.
 
-Want it added proactively? Open a [Vendor Request](https://github.com/crinkl-protocol/crinkl-agent/issues/new?template=vendor-request.yml) with:
+Use `npm run dev -- --discover` (or add `--agentmail`) to see unsupported
+receipt senders to request. It reports domains and counts without sending
+emails to the verification or submission routes. Add `--json` for JSON output.
+
+The manual alternative is a [Vendor Request](https://github.com/crinkl-protocol/crinkl-agent/issues/new?template=vendor-request.yml) with:
+
 - Vendor name and billing domain
 - Whether they send DKIM-signed billing emails
 - Any notes on email format
@@ -17,17 +27,17 @@ Want it added proactively? Open a [Vendor Request](https://github.com/crinkl-pro
 
 ## Add an email provider
 
-Currently Gmail only. To add Outlook, Yahoo, or another provider:
+Gmail and AgentMail use the same processing loop. To add Outlook, Yahoo, or another provider:
 
-1. Create `src/<provider>.ts` implementing the same interface as `gmail.ts`:
-   - `getClient(config)` — authenticate
-   - `searchReceiptEmails(client, vendors, maxAgeDays)` — find receipt emails
-   - `downloadRawEml(client, messageId)` — download raw `.eml`
-   - `getMessageSubject(client, messageId)` — display subject
+1. Create `src/<provider>.ts` implementing `EmailSource` from `src/pipeline.ts`:
+   - `listMessages()` — message IDs within the configured age window
+   - `getMetadata(messageId)` — separate subject and real From header
+   - `downloadRawEml(messageId)` — download raw `.eml` in memory
+   - In discovery mode, list all receipt-like subjects without an allowlist restriction and include all pages.
 
-2. Add a `--provider` flag or auto-detect in `src/index.ts`
+2. Add a flag in `src/index.ts` and select the source in `src/cli.ts`.
 
-3. Include OAuth setup instructions in the PR
+3. Include authentication setup instructions and fake-source tests in the PR.
 
 ---
 

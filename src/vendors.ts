@@ -29,7 +29,7 @@ interface ApiVendor {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Fetch vendors from the Crinkl API, fall back to shipped allowlist. */
-export async function loadVendors(apiUrl: string): Promise<Vendor[]> {
+export async function loadVendors(apiUrl: string, log: (line: string) => void = console.log): Promise<Vendor[]> {
   try {
     const response = await fetch(`${apiUrl}/api/agent/allowed-vendors`, {
       signal: AbortSignal.timeout(5000),
@@ -44,7 +44,7 @@ export async function loadVendors(apiUrl: string): Promise<Vendor[]> {
       name: v.displayName,
     }));
   } catch {
-    console.log("  Could not reach vendor API — using shipped allowlist.\n");
+    log("  Could not reach vendor API — using shipped allowlist.\n");
     return loadLocalVendors();
   }
 }
