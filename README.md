@@ -100,9 +100,35 @@ npm run dev             # scan + submit
 
 ```
 npm run dev              # scan Gmail + submit receipts
+npm run dev -- --agentmail  # scan AgentMail + submit receipts
 npm run dev -- --scan    # dry run (preview only, no submissions)
 npm run dev -- --auth    # set up Gmail auth only
+npm run dev -- --discover  # count unsupported Gmail receipt senders
+npm run dev -- --agentmail --discover  # same discovery for AgentMail
+npm run dev -- --discover --json  # domain counts as JSON
 ```
+
+`--discover` searches the last `MAX_EMAIL_AGE_DAYS` (default 14) for receipt,
+invoice, payment, order, purchase or billing statement subjects from senders
+outside the vendor allowlist. It prints only sender domains and message counts,
+highest count first. It never downloads raw emails, verifies receipts or submits
+them, and does not read or change the submitted-email history. Email provider
+credentials are needed; a Crinkl API key is not. `--json` requires `--discover`.
+Gmail authorization can be set up separately with `--auth`. The allowlist is
+fetched from the public API, with the shipped list as fallback; diagnostics go
+to stderr so discovery stdout contains only the table or JSON.
+
+Normal scans filter known vendors by receipt subject (including AgentMail).
+Vendor-specific rules are kept, such as Amazon's "shipped" subject; other
+vendors use the default receipt words above. Unknown AgentMail senders still
+go to the server for review. Gmail submission scans remain allowlist-only;
+discovery helps identify vendors to request without submitting any email.
+
+When the API returns HTTP 429 or `DAILY_RECEIPT_LIMIT_REACHED`, the run stops
+with one daily-limit message. The blocked email and the remaining emails are
+left unmarked for the next run. Queued vendors also stay unmarked; successful
+submissions, duplicates and DKIM failures are marked locally. Service or
+authorization failures during preview stay unmarked so they can be retried.
 
 #### Run on a schedule
 
@@ -241,7 +267,11 @@ This agent runs on your machine. Here's what leaves it:
 
 ```
 src/
-├── index.ts       # CLI entry — Gmail/AgentMail scan loop, submit/dedup logic
+├── index.ts       # CLI flags and entry
+├── cli.ts         # setup, provider selection and local dedup history
+├── filters.ts     # receipt subjects and sender/vendor matching
+├── pipeline.ts    # shared Gmail/AgentMail receipt processing loop
+├── discovery.ts   # unsupported sender domain counts (no receipt API calls)
 ├── config.ts      # .env loader
 ├── gmail.ts       # Gmail OAuth + search + download
 ├── agentmail.ts   # AgentMail inbox + message listing + raw .eml download
@@ -249,7 +279,7 @@ src/
 └── vendors.ts     # Vendor allowlist (API-first, shipped fallback)
 ```
 
-~300 lines of core logic. The server does the hard part.
+The server does receipt verification and data extraction.
 
 ## License
 
