@@ -6,6 +6,21 @@ beforeEach(() => vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network f
 afterEach(() => vi.unstubAllGlobals());
 
 describe("discovery", () => {
+  it.each([
+    "Vendor <billing@new.example> (Accounts)",
+    "billing@new.example",
+    '"Vendor, <billing@anthropic.com>" <billing@new.example> (Accounts)',
+  ])("counts the actual unknown mailbox in %s", async (from) => {
+    const source = fakeSource([
+      { messageId: "unknown", from, subject: "Invoice" },
+      { messageId: "known", from: "Vendor <billing@anthropic.com> (Accounts)", subject: "Invoice" },
+    ]);
+    expect(await discoverSenders(source, [{ domain: "anthropic.com", name: "Anthropic" }])).toEqual([
+      { domain: "new.example", count: 1 },
+    ]);
+    expect(source.downloadRawEml).not.toHaveBeenCalled();
+  });
+
   it("counts only unknown receipt-like sender domains, sorted by count then domain", async () => {
     const source = fakeSource([
       { messageId: "1", from: "Private Name <private@new.example>", subject: "Receipt for $123.45" },

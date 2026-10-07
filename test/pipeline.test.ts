@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { processEmails } from "../src/pipeline.js";
+import { CrinklClient } from "../src/crinkl.js";
 import { fakeSource, fakeClient, verified, submitted } from "./helpers.js";
 
 beforeEach(() => vi.stubGlobal("fetch", vi.fn(() => { throw new Error("Network forbidden in tests"); })));
@@ -14,6 +15,73 @@ function setup() {
 }
 
 describe("shared receipt pipeline", () => {
+  it.each([
+    ["text/html", "<html>Upstream failure</html>"],
+    ["application/json", "{broken"],
+    ["application/json", "null"],
+    ["application/json", "{}"],
+    ["application/json", '{"success":false}'],
+    ["application/json", '{"success":true,"error":"Upstream failure"}'],
+    ["application/json", '{"success":false,"error":42}'],
+    ["application/json", '{"success":false,"error":"   "}'],
+  ])("retries HTTP 422 preview format failures (%s, %s) through the real client", async (contentType, body) => {
+    const options = setup();
+    options.source = fakeSource([{ messageId: "1", from: "billing@paddle.com", subject: "Receipt" }]);
+    const client = new CrinklClient({
+      crinklApiKey: "test-key", crinklApiUrl: "https://example.invalid", gmailClientId: "",
+      gmailClientSecret: "", maxEmailAgeDays: 14, credentialsPath: "unused",
+    });
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(body, { status: 422, headers: { "content-type": contentType } }));
+    vi.stubGlobal("fetch", fetchMock);
+    for (let run = 0; run < 2; run++) {
+      expect(await processEmails({ ...options, client })).toEqual({ submitted: 0, skipped: 0, errors: 1, dailyLimitReached: false });
+      expect(options.submittedIds.size).toBe(0);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every(([url]) => String(url).endsWith("/verify-email-receipt"))).toBe(true);
+  });
+
+  it("marks a real HTTP 422 validation rejection through the real client", async () => {
+    const options = setup();
+    const client = new CrinklClient({
+      crinklApiKey: "test-key", crinklApiUrl: "https://example.invalid", gmailClientId: "",
+      gmailClientSecret: "", maxEmailAgeDays: 14, credentialsPath: "unused",
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ success: false, error: "DKIM failed" }), {
+      status: 422, headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await processEmails({ ...options, client })).skipped).toBe(3);
+    expect(options.submittedIds.size).toBe(3);
+    await processEmails({ ...options, client });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("leaves transport failures retryable through the real client", async () => {
+    const options = setup();
+    const client = new CrinklClient({
+      crinklApiKey: "test-key", crinklApiUrl: "https://example.invalid", gmailClientId: "",
+      gmailClientSecret: "", maxEmailAgeDays: 14, credentialsPath: "unused",
+    });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Connection reset")));
+    expect((await processEmails({ ...options, client })).errors).toBe(3);
+    expect(options.submittedIds.size).toBe(0);
+  });
+
+  it.each([
+    "Vendor <billing@anthropic.com> (Accounts)",
+    "billing@anthropic.com",
+    '"Vendor, <billing@other.example>" <billing@anthropic.com> (Accounts)',
+  ])("applies the vendor subject filter for %s", async (from) => {
+    const options = setup();
+    options.vendors = [{ domain: "anthropic.com", name: "Anthropic" }];
+    options.source = fakeSource([{ messageId: "1", from, subject: "Your payment" }]);
+    expect((await processEmails(options)).skipped).toBe(1);
+    expect(options.source.downloadRawEml).not.toHaveBeenCalled();
+    expect(options.client.verifyEmailReceipt).not.toHaveBeenCalled();
+    expect(options.client.submitEmailReceipt).not.toHaveBeenCalled();
+  });
+
   it("marks submitted receipts and deduplicates before downloading", async () => {
     const options = setup();
     options.submittedIds.add("1");
@@ -37,7 +105,7 @@ describe("shared receipt pipeline", () => {
   });
 
   it.each([
-    { success: false, httpStatus: 422, error: "DKIM failed" },
+    { success: false, httpStatus: 422, error: "DKIM failed", validationRejected: true },
     { ...verified, data: { ...verified.data!, dkimVerified: false } },
   ])("marks DKIM failures without submitting", async (failure) => {
     const options = setup();

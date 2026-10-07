@@ -9,6 +9,8 @@ import type { Config } from "./config.js";
 
 export interface VerifyResult {
   success: boolean;
+  /** The parsed server body explicitly reported success: false with an error. */
+  validationRejected?: boolean;
   httpStatus?: number;
   code?: string;
   data?: {
@@ -101,6 +103,9 @@ export class CrinklClient {
       const result = body as T;
       return {
         ...result,
+        ...(route === "verify-email-receipt" ? {
+          validationRejected: result.success === false && typeof result.error === "string" && result.error.trim().length > 0,
+        } : {}),
         success: response.ok && result.success === true,
         httpStatus,
         error: result.error || httpError,

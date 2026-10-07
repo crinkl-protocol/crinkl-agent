@@ -61,14 +61,15 @@ export async function processEmails(options: {
         break;
       }
       if (!preview.success || !preview.data) {
-        // A service/auth failure says nothing about whether this is a receipt.
-        if (preview.httpStatus && preview.httpStatus !== 422) {
-          log(`  ERROR: ${preview.error || "Receipt preview failed"}`);
-          summary.errors++;
-        } else {
+        // Only an explicit server validation rejection makes this email final.
+        // Parsing, transport and service/auth failures must remain retryable.
+        if (preview.validationRejected === true && (!preview.httpStatus || preview.httpStatus === 422)) {
           log(`  SKIP: ${preview.error || "Receipt preview failed"}`);
           submittedIds.add(messageId);
           summary.skipped++;
+        } else {
+          log(`  ERROR: ${preview.error || "Receipt preview failed"}`);
+          summary.errors++;
         }
         continue;
       }

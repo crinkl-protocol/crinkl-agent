@@ -26,9 +26,51 @@ export function isReceiptSubject(subject: string, vendorDomain: string): boolean
 
 /** Read a single mailbox, ignoring display names rather than searching them. */
 export function senderDomain(from: string): string | null {
-  const mailbox = from.includes("<")
-    ? from.match(/<([^<>]+)>\s*$/)?.[1]
-    : from.trim();
+  if (/[\r\n]/.test(from)) return null;
+  let address = "";
+  let quoted = false;
+  let escaped = false;
+  let commentDepth = 0;
+  let angleStart = -1;
+  let angleEnd = -1;
+  for (const char of from) {
+    if (escaped) {
+      if (!commentDepth) address += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\" && (quoted || commentDepth)) {
+      if (!commentDepth) address += char;
+      escaped = true;
+      continue;
+    }
+    if (commentDepth) {
+      if (char === "(") commentDepth++;
+      if (char === ")") commentDepth--;
+      continue;
+    }
+    if (char === '"') quoted = !quoted;
+    if (!quoted) {
+      if (char === "(") {
+        commentDepth = 1;
+        address += " ";
+        continue;
+      }
+      if (char === ")" || char === ",") return null;
+      if (char === "<") {
+        if (angleStart !== -1) return null;
+        angleStart = address.length;
+      }
+      if (char === ">") {
+        if (angleStart === -1 || angleEnd !== -1) return null;
+        angleEnd = address.length;
+      }
+    }
+    address += char;
+  }
+  if (quoted || escaped || commentDepth) return null;
+  if (angleStart !== -1 && (angleEnd === -1 || address.slice(angleEnd + 1).trim())) return null;
+  const mailbox = angleStart === -1 ? address.trim() : address.slice(angleStart + 1, angleEnd);
   const domain = mailbox?.trim().match(/^[^@\s<>]+@([^@\s<>]+)$/)?.[1]?.toLowerCase();
   if (!domain || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/.test(domain)) return null;
   return domain;

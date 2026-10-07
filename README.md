@@ -103,9 +103,9 @@ npm run dev              # scan Gmail + submit receipts
 npm run dev -- --agentmail  # scan AgentMail + submit receipts
 npm run dev -- --scan    # dry run (preview only, no submissions)
 npm run dev -- --auth    # set up Gmail auth only
-npm run dev -- --discover  # count unsupported Gmail receipt senders
-npm run dev -- --agentmail --discover  # same discovery for AgentMail
-npm run dev -- --discover --json  # domain counts as JSON
+npm run --silent dev -- --discover  # count unsupported Gmail receipt senders
+npm run --silent dev -- --agentmail --discover  # same discovery for AgentMail
+npm run --silent dev -- --discover --json  # domain counts as JSON
 ```
 
 `--discover` searches the last `MAX_EMAIL_AGE_DAYS` (default 14) for receipt,

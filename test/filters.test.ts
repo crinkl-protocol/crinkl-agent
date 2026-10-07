@@ -38,6 +38,17 @@ describe("receipt subject filters", () => {
 describe("sender matching", () => {
   const overlapping = ["openai.com", "email.openai.com", "tm1.openai.com"].map((domain) => ({ domain, name: domain }));
 
+  it.each([
+    "Vendor <billing@anthropic.com> (Accounts)",
+    "billing@anthropic.com",
+    "billing@anthropic.com (Accounts)",
+    '"Vendor, <billing@other.example>" <billing@anthropic.com>',
+    '"Vendor, <billing@other.example>" <billing@anthropic.com> (Accounts)',
+    '"Vendor \\"Accounts\\"" <billing@anthropic.com> (Accounts (billing@other.example))',
+  ])("reads a mailbox without confusing comments or quoted display names: %s", (from) => {
+    expect(senderDomain(from)).toBe("anthropic.com");
+  });
+
   it.each([[overlapping], [[...overlapping].reverse()]])("chooses the most specific domain regardless of list order", (list) => {
     expect(matchVendorDomain("OpenAI <billing@TM1.OPENAI.COM>", list)).toBe("tm1.openai.com");
     expect(matchVendorDomain("billing@sub.tm1.openai.com", list)).toBe("tm1.openai.com");
