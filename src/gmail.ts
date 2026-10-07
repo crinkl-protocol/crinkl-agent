@@ -11,6 +11,9 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 import type { Config } from "./config.js";
+import type { EmailSource, EmailMetadata } from "./pipeline.js";
+import type { Vendor } from "./vendors.js";
+import { RECEIPT_KEYWORDS } from "./filters.js";
 
 const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 const REDIRECT_URI = "http://localhost";
@@ -22,7 +25,7 @@ interface StoredCredentials {
 }
 
 /** Get authenticated Gmail client. Runs OAuth flow on first use. */
-export async function getGmailClient(config: Config) {
+export async function getGmailClient(config: Config, log: (line: string) => void = console.log, output: NodeJS.WritableStream = process.stdout) {
   const oauth2 = new google.auth.OAuth2(
     config.gmailClientId,
     config.gmailClientSecret,
@@ -45,14 +48,14 @@ export async function getGmailClient(config: Config) {
     prompt: "consent",
   });
 
-  console.log("\n--- Gmail Authorization ---");
-  console.log("1. Open this URL in your browser:\n");
-  console.log(`   ${authUrl}\n`);
-  console.log("2. Authorize the app. You'll be redirected to a page that won't load.");
-  console.log("3. Copy the FULL URL from your browser's address bar and paste it below.\n");
-  console.log("   It will look like: http://localhost?code=4/0AQ...\n");
+  log("\n--- Gmail Authorization ---");
+  log("1. Open this URL in your browser:\n");
+  log(`   ${authUrl}\n`);
+  log("2. Authorize the app. You'll be redirected to a page that won't load.");
+  log("3. Copy the FULL URL from your browser's address bar and paste it below.\n");
+  log("   It will look like: http://localhost?code=4/0AQ...\n");
 
-  const rawUrl = await prompt("Paste the full redirect URL: ");
+  const rawUrl = await prompt("Paste the full redirect URL: ", output);
 
   // Extract code from the pasted URL
   let code: string;
@@ -73,7 +76,7 @@ export async function getGmailClient(config: Config) {
     JSON.stringify(tokens, null, 2),
     { mode: 0o600 }
   );
-  console.log(`Credentials saved to ${config.credentialsPath}\n`);
+  log(`Credentials saved to ${config.credentialsPath}\n`);
 
   return google.gmail({ version: "v1", auth: oauth2 });
 }
@@ -126,31 +129,63 @@ export async function downloadRawEml(
   return Buffer.from(raw, "base64url").toString("utf-8");
 }
 
-/** Get email subject for display */
-export async function getMessageSubject(
+/** Get the actual subject and From header separately. */
+export async function getMessageMetadata(
   gmail: ReturnType<typeof google.gmail>,
   messageId: string
-): Promise<string> {
+): Promise<EmailMetadata> {
   const response = await gmail.users.messages.get({
     userId: "me",
     id: messageId,
     format: "metadata",
-    metadataHeaders: ["Subject", "From", "Date"],
+    metadataHeaders: ["Subject", "From"],
   });
 
   const headers = response.data.payload?.headers || [];
   const subject =
-    headers.find((h) => h.name === "Subject")?.value || "(no subject)";
-  const from = headers.find((h) => h.name === "From")?.value || "";
-  const date = headers.find((h) => h.name === "Date")?.value || "";
+    headers.find((h) => h.name?.toLowerCase() === "subject")?.value || "(no subject)";
+  const from = headers.find((h) => h.name?.toLowerCase() === "from")?.value || "";
 
-  return `${date} | ${from} | ${subject}`;
+  return { subject, from };
 }
 
-function prompt(question: string): Promise<string> {
+/** Discovery searches all receipt-like subjects, with no vendor restriction. */
+export async function searchDiscoveryEmails(
+  gmail: ReturnType<typeof google.gmail>,
+  maxAgeDays: number
+): Promise<Array<{ messageId: string }>> {
+  const subjects = RECEIPT_KEYWORDS.map((word) => `subject:"${word}"`).join(" OR ");
+  const q = `(${subjects}) newer_than:${maxAgeDays}d`;
+  const messages: Array<{ messageId: string }> = [];
+  let pageToken: string | undefined;
+  do {
+    const response = await gmail.users.messages.list({
+      userId: "me", q, maxResults: 50, pageToken,
+    });
+    for (const message of response.data.messages || []) {
+      if (message.id) messages.push({ messageId: message.id });
+    }
+    pageToken = response.data.nextPageToken || undefined;
+  } while (pageToken);
+  return messages;
+}
+
+export function gmailSource(
+  gmail: ReturnType<typeof google.gmail>, vendors: Vendor[], maxAgeDays: number, discover = false
+): EmailSource {
+  return {
+    listMessages: () => discover
+      ? searchDiscoveryEmails(gmail, maxAgeDays)
+      : searchReceiptEmails(gmail, vendors, maxAgeDays),
+    getMetadata: (id) => getMessageMetadata(gmail, id),
+    downloadRawEml: (id) => downloadRawEml(gmail, id),
+  };
+}
+
+function prompt(question: string, output: NodeJS.WritableStream): Promise<string> {
   const rl = createInterface({
     input: process.stdin,
-    output: process.stdout,
+    output,
   });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {

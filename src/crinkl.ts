@@ -7,8 +7,10 @@
 
 import type { Config } from "./config.js";
 
-interface VerifyResult {
+export interface VerifyResult {
   success: boolean;
+  httpStatus?: number;
+  code?: string;
   data?: {
     dkimVerified: boolean;
     dkimDomain: string;
@@ -26,8 +28,10 @@ interface VerifyResult {
   maxAgeDays?: number;
 }
 
-interface SubmitResult {
+export interface SubmitResult {
   success: boolean;
+  httpStatus?: number;
+  code?: string;
   /** Present when spend was created (201) */
   data?: {
     submissionId: string;
@@ -61,26 +65,18 @@ export class CrinklClient {
 
   /** Preview DKIM verification without submitting */
   async verifyEmailReceipt(rawEml: string): Promise<VerifyResult> {
-    const eml = Buffer.from(rawEml).toString("base64");
-    const response = await fetch(
-      `${this.apiUrl}/api/agent/verify-email-receipt`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.apiKey,
-        },
-        body: JSON.stringify({ eml }),
-      }
-    );
-    return response.json() as Promise<VerifyResult>;
+    return this.post<VerifyResult>("verify-email-receipt", rawEml);
   }
 
   /** Submit a DKIM-verified email receipt for rewards */
   async submitEmailReceipt(rawEml: string): Promise<SubmitResult> {
+    return this.post<SubmitResult>("submit-email-receipt", rawEml);
+  }
+
+  private async post<T extends VerifyResult | SubmitResult>(route: string, rawEml: string): Promise<T> {
     const eml = Buffer.from(rawEml).toString("base64");
     const response = await fetch(
-      `${this.apiUrl}/api/agent/submit-email-receipt`,
+      `${this.apiUrl}/api/agent/${route}`,
       {
         method: "POST",
         headers: {
@@ -90,6 +86,27 @@ export class CrinklClient {
         body: JSON.stringify({ eml }),
       }
     );
-    return response.json() as Promise<SubmitResult>;
+    const httpStatus = response.status;
+    const httpLabel = `Crinkl API HTTP ${httpStatus}`;
+    const httpError = response.ok ? undefined : httpLabel;
+    const contentType = response.headers.get("content-type") || "";
+    if (!/\bapplication\/(?:[\w.-]+\+)?json\b/i.test(contentType)) {
+      return { success: false, httpStatus, error: `${httpLabel}: expected JSON response` } as T;
+    }
+    try {
+      const body: unknown = await response.json();
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        throw new Error("Invalid response");
+      }
+      const result = body as T;
+      return {
+        ...result,
+        success: response.ok && result.success === true,
+        httpStatus,
+        error: result.error || httpError,
+      };
+    } catch {
+      return { success: false, httpStatus, error: `Crinkl API HTTP ${httpStatus}: invalid JSON response` } as T;
+    }
   }
 }

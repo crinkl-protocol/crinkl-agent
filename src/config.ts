@@ -33,11 +33,11 @@ function loadDotEnv(): void {
   }
 }
 
-export function loadConfig(opts?: { agentmail?: boolean }): Config {
+export function loadConfig(opts?: { agentmail?: boolean; discover?: boolean }): Config {
   loadDotEnv();
 
   const crinklApiKey = process.env.CRINKL_API_KEY;
-  if (!crinklApiKey) {
+  if (!crinklApiKey && !opts?.discover) {
     console.error(
       "CRINKL_API_KEY is required. Get one from https://app.crinkl.xyz (Profile → Crinkl Agent Keys → Create key)"
     );
@@ -63,7 +63,7 @@ export function loadConfig(opts?: { agentmail?: boolean }): Config {
   }
 
   return {
-    crinklApiKey,
+    crinklApiKey: crinklApiKey || "",
     crinklApiUrl: process.env.CRINKL_API_URL || "https://api.crinkl.xyz",
     gmailClientId,
     gmailClientSecret,
