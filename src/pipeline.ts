@@ -60,7 +60,7 @@ export async function processEmails(options: {
         stopAtLimit();
         break;
       }
-      if (!preview.success || !preview.data) {
+      if (!preview.success) {
         // Only an explicit server validation rejection makes this email final.
         // Parsing, transport and service/auth failures must remain retryable.
         if (preview.validationRejected === true && (!preview.httpStatus || preview.httpStatus === 422)) {
@@ -75,12 +75,19 @@ export async function processEmails(options: {
       }
 
       const data = preview.data;
+      if (!data || typeof data !== "object" || Array.isArray(data)
+        || typeof data.dkimVerified !== "boolean"
+        || typeof data.totalCents !== "number" || !Number.isFinite(data.totalCents)) {
+        log("  ERROR: Receipt preview response format is invalid");
+        summary.errors++;
+        continue;
+      }
       const amount = (data.totalCents / 100).toFixed(2);
       log(`  DKIM: ${data.dkimVerified ? "PASS" : "FAIL"} (${data.dkimDomain})`);
       log(`  Amount: $${amount} ${data.currency}`);
       log(`  Date: ${data.date}`);
       if (data.invoiceId) log(`  Invoice: ${data.invoiceId}`);
-      if (!data.dkimVerified) {
+      if (data.dkimVerified === false) {
         log("  SKIP: DKIM verification failed");
         submittedIds.add(messageId);
         summary.skipped++;

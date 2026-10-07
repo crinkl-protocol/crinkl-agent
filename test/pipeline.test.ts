@@ -16,6 +16,58 @@ function setup() {
 
 describe("shared receipt pipeline", () => {
   it.each([
+    ["missing data", '{"success":true}'],
+    ["empty data", '{"success":true,"data":{}}'],
+    ["null data", '{"success":true,"data":null}'],
+    ["array data", '{"success":true,"data":[]}'],
+    ["non-object data", '{"success":true,"data":42}'],
+    ["dkimVerified absent", '{"success":true,"data":{"totalCents":1250}}'],
+    ["dkimVerified null", '{"success":true,"data":{"dkimVerified":null,"totalCents":1250}}'],
+    ["dkimVerified not boolean", '{"success":true,"data":{"dkimVerified":"false","totalCents":1250}}'],
+    ["totalCents absent", '{"success":true,"data":{"dkimVerified":true}}'],
+    ["totalCents null", '{"success":true,"data":{"dkimVerified":true,"totalCents":null}}'],
+    ["totalCents not number", '{"success":true,"data":{"dkimVerified":true,"totalCents":"1250"}}'],
+    ["totalCents not finite", '{"success":true,"data":{"dkimVerified":true,"totalCents":1e400}}'],
+    ["DKIM false with malformed amount", '{"success":true,"data":{"dkimVerified":false}}'],
+  ])("retries HTTP 200 preview response-format failures (%s) through the real client", async (_label, body) => {
+    const options = setup();
+    options.source = fakeSource([{ messageId: "1", from: "billing@paddle.com", subject: "Receipt" }]);
+    const client = new CrinklClient({
+      crinklApiKey: "test-key", crinklApiUrl: "https://example.invalid", gmailClientId: "",
+      gmailClientSecret: "", maxEmailAgeDays: 14, credentialsPath: "unused",
+    });
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(body, {
+      status: 200, headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    for (let run = 0; run < 2; run++) {
+      expect(await processEmails({ ...options, client })).toEqual({ submitted: 0, skipped: 0, errors: 1, dailyLimitReached: false });
+      expect(options.submittedIds.size).toBe(0);
+      expect(options.log).toHaveBeenLastCalledWith("  ERROR: Receipt preview response format is invalid");
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every(([url]) => String(url).endsWith("/verify-email-receipt"))).toBe(true);
+  });
+
+  it("marks an explicit HTTP 200 DKIM rejection through the real client", async () => {
+    const options = setup();
+    options.source = fakeSource([{ messageId: "1", from: "billing@paddle.com", subject: "Receipt" }]);
+    const client = new CrinklClient({
+      crinklApiKey: "test-key", crinklApiUrl: "https://example.invalid", gmailClientId: "",
+      gmailClientSecret: "", maxEmailAgeDays: 14, credentialsPath: "unused",
+    });
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+      ...verified, data: { ...verified.data!, dkimVerified: false },
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await processEmails({ ...options, client })).toEqual({ submitted: 0, skipped: 1, errors: 0, dailyLimitReached: false });
+    expect([...options.submittedIds]).toEqual(["1"]);
+    await processEmails({ ...options, client });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/verify-email-receipt");
+  });
+
+  it.each([
     ["text/html", "<html>Upstream failure</html>"],
     ["application/json", "{broken"],
     ["application/json", "null"],
